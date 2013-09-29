@@ -90,13 +90,13 @@ func (p Path) Child(subpath string) (n Router, remainingSubpath string) {
 
 	//Check if the next node is present
 	splt := strings.SplitN(subpath, "/", 3)
-	if pR, ok := p[splt[0]]; ok {
+	if pR, ok := p[splt[1]]; ok {
 		return pR, splt[1]
 	}
 
 	//Check if we have a route that begins with the subpath
 	for path, pR := range p {
-		if strings.HasPrefix(subpath, path) {
+		if path != "" && strings.HasPrefix(subpath, path) {
 			return pR, strings.TrimLeft(subpath, path)
 		}
 	}
