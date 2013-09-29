@@ -12,6 +12,10 @@ func HandlerOf(h http.Handler) Handler {
 	}
 }
 
+func HandlerFunc(hf http.HandlerFunc) Handler {
+	return HandlerOf(hf)
+}
+
 type Handler struct {
 	http.Handler
 }
