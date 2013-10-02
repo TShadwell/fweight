@@ -4,7 +4,6 @@ import (
 	//"fmt"
 	"log"
 	"net/http"
-	"reflect"
 )
 
 var contentType = http.CanonicalHeaderKey("Content-Type")
@@ -36,12 +35,17 @@ func (e ExtendedErr) Error() (o string) {
 //The http.ResponseWriters served by Server are extended fweight.ResponseWriters,
 //which can be used to access the Server's additional error handling functionality
 //whilst being backward compatible with typical http.Handlers and HandlerFuncs.
+//
+//If you wish to add your own extra functionality, a non-nil Extension field is
+//used on all requests/responseWriters before they are passed to handlers.
+//The Compression extension should be used as an example of an Extension.
 type Server struct {
 	Router
 	//The ErrorHandler is sent an error with an ExtendedErr type.
 	//For StatusInternalServerError, the AdditionalInformation field contains
 	//whatever information the subrouter paniced with.
 	ErrorHandler
+	Extension
 }
 
 func (s *Server) Wrap(rw http.ResponseWriter, rq *http.Request) (o ResponseWriter) {
@@ -82,30 +86,21 @@ func isHandler(r Router) (b bool) {
 	return
 }
 
-const debugLevel = 0
-
-func debugLv(level uint, i ...interface{}) {
-	/*
-		if level <= debugLevel {
-			log.Println(append([]interface{}{"DEBUG LEVEL " + fmt.Sprint(level)}, i...)...)
-		}
-	*/
-}
-
 /*
 	Serves HTTP.
 
 	http.ListenAndServe(":8080", new(Server))
 */
 func (s *Server) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
+	if s.Extension != nil{
+		rw, rq = s.Extension.TransformRequest(rw, rq)
+	}
 	//A nil server will route all requesrs to NotFound.
 	if s == nil || s.Router == nil {
-		debugLv(1, "Dropped request due to nil Router or Server.")
 		s.HandleHTTPError(Err(StatusNotFound), rw, rq)
 		return
 	}
 	for router := s.Router.RouteHTTP(rq); ; router = router.RouteHTTP(rq) {
-		debugLv(1, "Routing into value:", reflect.ValueOf(router))
 		if router == nil {
 			s.HandleHTTPError(
 				Err(StatusNotFound),
@@ -151,6 +146,7 @@ func (s *Server) ServeError(e Err, rw http.ResponseWriter, rq *http.Request) {
 func (s *Server) HandleHTTPError(e error, rw http.ResponseWriter, rq *http.Request) {
 	if s != nil && s.ErrorHandler != nil {
 		s.ErrorHandler.HandleHTTPError(e, rw, rq)
+		return
 	}
 	DefaultErrorHandler.HandleHTTPError(e, rw, rq)
 }
