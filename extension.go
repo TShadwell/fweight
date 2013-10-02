@@ -15,6 +15,7 @@ type Extension interface {
 
 type Compression struct {
 	Extension
+	ErrorHandler func(error)
 }
 
 type compressor interface {
@@ -23,15 +24,33 @@ type compressor interface {
 	Flush() error
 }
 
-type compressionWrap struct {
-	http.ResponseWriter
-	compressor compressor
+func (c compressionWrap) handleError(e error) {
+	if c.errorHandler != nil {
+		c.errorHandler(e)
+	}
 }
 
-func (c compressionWrap) Write(b []byte) (n int, err error) {
-	defer c.compressor.Close()
-	defer c.compressor.Flush()
-	return c.compressor.Write(b)
+type compressionWrap struct {
+	http.ResponseWriter
+	compressor   compressor
+	errorHandler func(error)
+}
+
+func (c compressionWrap) Write(b []byte) (i int, e error) {
+	i, e = c.compressor.Write(b)
+	if e != nil {
+		c.handleError(e)
+		return
+	}
+	if e = c.compressor.Flush(); e != nil {
+		c.handleError(e)
+		return
+	}
+	if e = c.compressor.Close(); e != nil {
+		c.handleError(e)
+		return
+	}
+	return
 }
 
 func (c Compression) TransformRequest(rw http.ResponseWriter, rq *http.Request) (http.ResponseWriter, *http.Request) {
@@ -54,7 +73,7 @@ func (c Compression) TransformRequest(rw http.ResponseWriter, rq *http.Request) 
 				}
 			}
 			if compressor != nil {
-				return compressionWrap{rw, compressor}, rq
+				return compressionWrap{rw, compressor, c.ErrorHandler}, rq
 			}
 		}
 	}
