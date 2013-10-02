@@ -26,8 +26,6 @@ func (m AdvancedMarshalFunc) Marshal(v interface{}) ([]byte, map[string]string, 
 	return m(v)
 }
 
-
 func RegisterAdvancedMarshaler(mediatype string, m AdvancedMarshaler) error {
 	return mediaManager.addMarshaler(mediaType(mediatype), m)
 }
-

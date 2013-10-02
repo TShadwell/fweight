@@ -1,7 +1,10 @@
-
 // +build ignore
 
 package fweight
+
+/*
+	This still exists to be used as a reference for layer2.
+*/
 
 import (
 	"mime"

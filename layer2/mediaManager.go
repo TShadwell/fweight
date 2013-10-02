@@ -16,13 +16,13 @@ type marshalWrapper struct {
 }
 
 func (m marshalWrapper) Marshal(v interface{}) (bt []byte,
-	params map[string]string, err error){
+	params map[string]string, err error) {
 	bt, err = m.Marshaler.Marshal(v)
 	return
 }
 
+type mediaManagerSingleton map[mediaType]AdvancedMarshaler
 
-type mediaManagerSingleton map[mediaType] AdvancedMarshaler
 func (m mediaManagerSingleton) exist() {
 	if m == nil {
 		m = make(mediaManagerSingleton)

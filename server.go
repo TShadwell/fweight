@@ -92,7 +92,7 @@ func isHandler(r Router) (b bool) {
 	http.ListenAndServe(":8080", new(Server))
 */
 func (s *Server) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
-	if s.Extension != nil{
+	if s.Extension != nil {
 		rw, rq = s.Extension.TransformRequest(rw, rq)
 	}
 	//A nil server will route all requesrs to NotFound.

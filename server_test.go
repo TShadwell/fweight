@@ -57,6 +57,24 @@ func (t Integ) integTestString(res *http.Response, err error) {
 
 }
 
+func TestVarious(t *testing.T) {
+	const a, b, c, d = "alpha", "beta",
+		"gamma", "delta"
+	sv := httptest.NewServer(
+		new(Server).Route(
+			SubdomainRouter{
+				/*
+					beta.alpha -> test
+				*/
+				a: SubdomainRouter{
+					b: HandlerOf(writeTestString),
+				},
+			},
+		),
+	)
+	defer sv.Close()
+}
+
 func TestSimplePath(t *testing.T) {
 	sv := httptest.NewServer(
 		new(Server).

@@ -54,7 +54,6 @@ type HeaderSetter interface {
 	HTTPHeader() http.Header
 }
 
-
 func HandlerOf(h Handler) http.Handler {
 	return nil
 }
