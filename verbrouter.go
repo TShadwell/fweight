@@ -7,7 +7,6 @@ import (
 var _ Router = make(VerbRouter)
 
 func (v VerbRouter) RouteHTTP(rq *http.Request) Router {
-	debugLv(1, "Got verb:", rq.Method)
 	return v.self()[rq.Method]
 }
 

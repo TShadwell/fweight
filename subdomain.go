@@ -125,7 +125,6 @@ func isSubdomain(r Router, sd DomainRouter) (b bool) {
 func (s SubdomainRouter) RouteHTTP(rq *http.Request) Router {
 	currentSubdomain, currentRouter := s, Router(nil)
 	var domain string
-	debugLv(1, "Routing domain", rq.Host)
 	//Initially, the host provides the domain steing.
 	for currentRouter, domain = s.Subdomain(rq.Host);
 	/*
@@ -134,13 +133,11 @@ func (s SubdomainRouter) RouteHTTP(rq *http.Request) Router {
 			return result
 	*/
 	isSubdomain(currentRouter, currentSubdomain); currentRouter, domain = currentSubdomain.Subdomain(domain) {
-		debugLv(1, "Subdomain routing - ", currentSubdomain, currentRouter, domain)
 	}
 	return currentRouter
 }
 
 func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {
-	debugLv(1, "State of Subdomain:", s, "Subpath", subpath)
 	//If the subpath is "empty", then we return this Subdomain's PathRouter
 	if SubdomainEmpty(subpath) {
 		return s[termHere], ""
