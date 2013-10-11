@@ -175,6 +175,11 @@ func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {
 	//Remove extra "empty" domains.
 	subpath = strings.TrimRight(subpath, ".")
 
+	//Remove port
+	if subp := strings.SplitN(subpath, ":", 2); len(subp) > 1 {
+		subpath = subp[0]
+	}
+
 	//Check if we have bound a handler for the entire remaining route.
 	if sD, ok := s[subpath]; ok {
 		if debug {
