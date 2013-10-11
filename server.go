@@ -45,7 +45,7 @@ type Server struct {
 	//For StatusInternalServerError, the AdditionalInformation field contains
 	//whatever information the subrouter paniced with.
 	ErrorHandler
-	Extension
+	Extensions []Extension
 }
 
 func (s *Server) Wrap(rw http.ResponseWriter, rq *http.Request) (o ResponseWriter) {
@@ -92,8 +92,10 @@ func isHandler(r Router) (b bool) {
 	http.ListenAndServe(":8080", new(Server))
 */
 func (s *Server) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
-	if s.Extension != nil {
-		rw, rq = s.Extension.TransformRequest(rw, rq)
+	if s.Extensions != nil {
+		for _, e := range s.Extensions{
+			rw, rq = e.TransformRequest(rw, rq)
+		}
 	}
 	//A nil server will route all requesrs to NotFound.
 	if s == nil || s.Router == nil {

@@ -13,8 +13,18 @@ type Extension interface {
 		rq *http.Request) (http.ResponseWriter, *http.Request)
 }
 
+type IgnorePort struct {
+
+}
+
+func (i IgnorePort) TransformRequest(rw http.ResponseWriter, rq *http.Request) (http.ResponseWriter, *http.Request) {
+	if spl := strings.SplitN(rq.Host, ":", 2); len(spl) > 1{
+		rq.Host=spl[0]
+	}
+	return rw, rq
+}
+
 type Compression struct {
-	Extension
 }
 
 type compressor interface {
