@@ -1,7 +1,9 @@
 package fweight
 
 import (
+	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 )
 
@@ -15,6 +17,8 @@ type DomainRouter interface {
 	Subdomain(subpath string) (s Router, remainingDomain string)
 	Router
 }
+
+const debug = false
 
 var _ DomainRouter = &SubdomainRouter{}
 var _ Router = &SubdomainRouter{}
@@ -123,28 +127,60 @@ func isSubdomain(r Router, sd DomainRouter) (b bool) {
 
 */
 func (s SubdomainRouter) RouteHTTP(rq *http.Request) Router {
-	currentSubdomain, currentRouter := s, Router(nil)
-	var domain string
-	//Initially, the host provides the domain steing.
-	for currentRouter, domain = s.Subdomain(rq.Host);
-	/*
-		Effectively
-			currentSubdomain, result = currentRouter.(DomainRouter)
-			return result
-	*/
-	isSubdomain(currentRouter, currentSubdomain); currentRouter, domain = currentSubdomain.Subdomain(domain) {
+	var (
+		currentSubdomain DomainRouter = s
+		domain           string       = rq.Host
+		currentRouter    Router
+	)
+	for {
+		currentRouter, domain = currentSubdomain.Subdomain(domain)
+
+		var ok bool
+		if currentSubdomain, ok = currentRouter.(DomainRouter); !ok {
+			if debug {
+				fmt.Println(reflect.TypeOf(currentRouter), reflect.TypeOf(currentSubdomain))
+			}
+			break
+		}
 	}
+
 	return currentRouter
 }
 
-func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {
-	//If the subpath is "empty", then we return this Subdomain's PathRouter
-	if SubdomainEmpty(subpath) {
-		return s[termHere], ""
+func (s SubdomainRouter) String() (o string) {
+	o = "["
+	for k, v := range s {
+		o += quoteString(k) + " -> " + reflect.ValueOf(v).String() + "\n"
 	}
+	return o[:len(o)-1] + "]"
+}
+
+func quoteString(s string) string {
+	return "\"" + s + "\""
+}
+
+func debRoute(ty, message string, v interface{}) {
+	var targetS string
+	if k, ok := v.(SubdomainRouter); ok {
+		targetS = k.String()
+	} else {
+		targetS = reflect.ValueOf(v).String()
+	}
+
+	fmt.Println(quoteString(ty), message, targetS)
+}
+
+func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {
+
+	//Remove extra "empty" domains.
+	subpath = strings.TrimRight(subpath, ".")
+	fmt.Println(subpath)
 
 	//Check if we have bound a handler for the entire remaining route.
 	if sD, ok := s[subpath]; ok {
+		if debug {
+			debRoute(subpath, "represents whole path in", sD)
+		}
 		//Nothing left.
 		return sD, ""
 	}
@@ -152,16 +188,27 @@ func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {
 	//Check if the next node is present
 	var cSubpath, cLevel string
 	cSubpath, cLevel = popLevel(subpath)
+	//If the subpath is "empty", then we return this Subdomain's PathRouter
 	if rT, ok := s[cLevel]; ok {
+		if debug {
+			debRoute(cLevel, "routes to ", rT)
+		}
 		return rT, cSubpath
 	}
 
 	//If the requested domain is the suffix of the current domain
 	//strip off that component as per its map.
 	for subDomain, router := range s {
-		if strings.HasSuffix(subpath, subDomain) {
+		if subDomain != termHere && strings.HasSuffix(subpath, subDomain) {
+			if debug {
+				debRoute(subDomain, "is a suffix of", subpath)
+			}
 			return router, removeSubdomain(subDomain, subpath)
 		}
+	}
+
+	if debug {
+		debRoute(subpath, "-- none matched, 404", nil)
 	}
 	return nil, subpath
 }

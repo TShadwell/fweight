@@ -93,7 +93,7 @@ func isHandler(r Router) (b bool) {
 */
 func (s *Server) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 	if s.Extensions != nil {
-		for _, e := range s.Extensions{
+		for _, e := range s.Extensions {
 			rw, rq = e.TransformRequest(rw, rq)
 		}
 	}
