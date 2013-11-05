@@ -1,9 +1,12 @@
 package fweight
 
 import (
+	"bytes"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -28,6 +31,101 @@ func TestEmptyServer(t *testing.T) {
 			t.FailNow()
 		}
 	}
+}
+
+func TestContinuity(t *testing.T) {
+	const lent = 100000
+	bt := make([]byte, lent)
+	//	bt:=[]byte(`hello world`)
+	for i := range bt {
+		bt[i] = byte(rand.Int())
+	}
+	sv := new(Server).Route(
+		PathRouter{
+			"file": PathRouter{
+				"cake": HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
+					rw.Write(bt)
+				}),
+			},
+		},
+	)
+	req, err := http.NewRequest("GET", "http://anything/file/cake", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	verifyEquality(t, w.Body.Bytes(), bt)
+
+}
+
+func verifyEquality(t *testing.T, a, b []byte) {
+	if !bytes.Equal(a, b) {
+		var count uint
+		for i, v := range a {
+			if v == b[i] {
+				count++
+			} else {
+				t.Logf("Byte incorrect at [%v] - %+q is not %+q", i, v, b[i])
+			}
+		}
+		//t.Logf("Not passing! A was:\n%+q\nB was:\n%+q", b, a)
+		t.Fatal("Failed continuity test,", count, "bytes correct.")
+	}
+}
+
+//TODO: originalRequest ?
+
+func TestFile(t *testing.T) {
+	const path http.Dir = "./_testfiles/"
+	const filename = "testfile.txt"
+	const host = "foo.com"
+	sv := (&Server{
+		Extensions: []Extension{
+			Compression{},
+		},
+	}).Route(
+		SubdomainRouter{
+			host: HandlerOf(http.FileServer(path)),
+		},
+	)
+	req, err := http.NewRequest("GET", "http://"+host+"/"+filename, nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+	file, err := os.Open(string(path) + filename)
+	if err != nil {
+		t.Logf("Error attempting to open test file %+q.\n", path+filename)
+		t.Fatal(err)
+	}
+	fc, err := ioutil.ReadAll(file)
+	if err != nil {
+		t.Fatalf("Error attempting to read test file %+q.\n", err)
+	}
+
+	verifyEquality(t, w.Body.Bytes(), fc)
+
+	q := httptest.NewServer(sv)
+	defer q.Close()
+	//Enter the WHY IS THIS NOT WORKING section.
+	if req, err = http.NewRequest("GET", q.URL+"/"+filename, nil); err != nil {
+		t.Fatal(err)
+	}
+	req.Host = host
+	rs, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer rs.Body.Close()
+	rp, err := ioutil.ReadAll(rs.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyEquality(t, rp, fc)
+	t.Logf("Got:%+q", rp)
 }
 
 const testString = "hello"

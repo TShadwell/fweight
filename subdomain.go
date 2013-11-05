@@ -2,6 +2,7 @@ package fweight
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -17,8 +18,6 @@ type DomainRouter interface {
 	Subdomain(subpath string) (s Router, remainingDomain string)
 	Router
 }
-
-const debug = false
 
 var _ DomainRouter = &SubdomainRouter{}
 var _ Router = &SubdomainRouter{}
@@ -138,7 +137,7 @@ func (s SubdomainRouter) RouteHTTP(rq *http.Request) Router {
 		var ok bool
 		if currentSubdomain, ok = currentRouter.(DomainRouter); !ok {
 			if debug {
-				fmt.Println(reflect.TypeOf(currentRouter), reflect.TypeOf(currentSubdomain))
+				log.Println("Subdomain routing terminated at:", reflect.TypeOf(currentRouter), reflect.TypeOf(currentSubdomain))
 			}
 			break
 		}
@@ -150,13 +149,9 @@ func (s SubdomainRouter) RouteHTTP(rq *http.Request) Router {
 func (s SubdomainRouter) String() (o string) {
 	o = "["
 	for k, v := range s {
-		o += quoteString(k) + " -> " + reflect.ValueOf(v).String() + "\n"
+		o += fmt.Sprintf("%+q -> %v\n", k, reflect.ValueOf(v))
 	}
 	return o[:len(o)-1] + "]"
-}
-
-func quoteString(s string) string {
-	return "\"" + s + "\""
 }
 
 func debRoute(ty, message string, v interface{}) {
@@ -167,7 +162,7 @@ func debRoute(ty, message string, v interface{}) {
 		targetS = reflect.ValueOf(v).String()
 	}
 
-	fmt.Println(quoteString(ty), message, targetS)
+	fmt.Printf("%+q, %+q, %+q\n", ty, message, targetS)
 }
 
 func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {

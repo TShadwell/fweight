@@ -1,12 +1,16 @@
 package fweight
 
 import (
+	"log"
 	"net/http"
+	"reflect"
 	"strings"
 )
 
-var _ PathRouter = new(Path)
-var _ Router = new(Path)
+var (
+	_ PathingRouter = new(PathRouter)
+	_ Router        = new(PathRouter)
+)
 
 //Func PathIsEmpty accounts for the fact that paths like
 // a/b///c or a/b// can exist, which would result in final
@@ -31,11 +35,11 @@ func PathEmpty(path string) bool {
 //a Path that routes a/b followed by one that routes a/b/c does
 //not result in a route of a/b/a/c, instead resulting in a route of
 //just a/b.
-type Path map[string]Router
+type PathRouter map[string]Router
 
-func (p Path) self() Path {
+func (p PathRouter) self() PathRouter {
 	if p == nil {
-		p = make(Path)
+		p = make(PathRouter)
 	}
 	return p
 }
@@ -46,7 +50,7 @@ func (p Path) self() Path {
 //A non PathRouter child will cause the Router to
 //be returned to the caller of RouteHTTP, causing the
 //path to terminate there if it is a Handler.
-func (p Path) AddChild(pR Router, name string) Path {
+func (p PathRouter) AddChild(pR Router, name string) PathRouter {
 	p[name] = pR
 	return p
 }
@@ -54,7 +58,7 @@ func (p Path) AddChild(pR Router, name string) Path {
 //Sets the Handler that is used when the path terminates here.
 //This is the same as AddChild(r, ""); the empty string routes
 //to here.
-func (p Path) Handler(r Router) Path {
+func (p PathRouter) Handler(r Router) PathRouter {
 	return p.AddChild(r, "")
 }
 
@@ -65,20 +69,49 @@ func isPathRouter(r Router) (b bool) {
 
 //RouteHTTP traverses the tree of Paths until the end of the URL path
 //is encountered, returning the terminal router or nil.
-func (p Path) RouteHTTP(rq *http.Request) Router {
-	remaining := strings.Trim(rq.URL.Path, "/")
-	var pRouter Router
-	for pRouter, remaining = p.Child(rq.URL.Path); isPathRouter(pRouter); pRouter, remaining = pRouter.(PathRouter).Child(remaining) {
+func (p PathRouter) RouteHTTP(rq *http.Request) Router {
+	/*
+		Now like SubdomainRouter!
+	*/
+	var (
+		currentPathingRouter PathingRouter = p
+		path                 string        = strings.Trim(rq.URL.Path, "/")
+		currentRouter        Router
+	)
+
+	for {
+		currentRouter, path = currentPathingRouter.Child(path)
+
+		var ok bool
+		if currentPathingRouter, ok = currentRouter.(PathingRouter); !ok {
+			if debug {
+				log.Println("Path routing terminated at", reflect.TypeOf(currentRouter), reflect.TypeOf(currentPathingRouter))
+			}
+			break
+		}
+
 	}
-	return pRouter
+
+	return currentRouter
 }
 
 //Function Child returns the next Router associated with the next
 //'hop' in the path.
-func (p Path) Child(subpath string) (n Router, remainingSubpath string) {
+func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
+
+	if debug {
+		log.Printf("Currently in path %+v\n", p)
+	}
+
+	//strip leading slashes
+	subpath = strings.TrimLeft(subpath, "/")
+
 	//If strings.SplitN(subpath, "/", 3)'s length is two, then this
 	//is the only item left in the path, and thus we must terminate here.
 	if subpath == "" || subpath == "/" {
+		if debug {
+			log.Println("Routing into current level (path is empty).")
+		}
 		return p[""], ""
 	}
 
@@ -86,12 +119,22 @@ func (p Path) Child(subpath string) (n Router, remainingSubpath string) {
 	//subpath (a/b/c)
 	if pR, ok := p[subpath]; ok {
 		return pR, ""
+	} else if debug {
+		log.Printf("%v not wholly in %+v\n", subpath, p)
 	}
 
 	//Check if the next node is present
 	splt := strings.SplitN(subpath, "/", 3)
-	if pR, ok := p[splt[1]]; ok {
-		return pR, splt[1]
+	log.Print(splt)
+	if len(splt) > 1 {
+		if pR, ok := p[splt[0]]; ok {
+			if debug {
+				log.Printf("Routed down into %v remaining string %+q.\n", reflect.TypeOf(pR), splt[1])
+			}
+			return pR, splt[1]
+		}
+	} else if debug {
+		log.Printf("%+v too short.\n", splt)
 	}
 
 	//Check if we have a route that begins with the subpath

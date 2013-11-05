@@ -1,7 +1,6 @@
 package fweight
 
 import (
-	//"fmt"
 	"log"
 	"net/http"
 )
@@ -92,17 +91,28 @@ func isHandler(r Router) (b bool) {
 	http.ListenAndServe(":8080", new(Server))
 */
 func (s *Server) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
-	if s.Extensions != nil {
+	if s != nil && s.Extensions != nil {
 		for _, e := range s.Extensions {
+			if k, ok := e.(RequestCompleteHooker); ok {
+				defer func() {
+					k.RequestCompleted(rw, rq)
+				}()
+			}
 			rw, rq = e.TransformRequest(rw, rq)
+
 		}
+
 	}
-	//A nil server will route all requesrs to NotFound.
+	//A nil server will route all requests to NotFound.
 	if s == nil || s.Router == nil {
 		s.HandleHTTPError(Err(StatusNotFound), rw, rq)
 		return
 	}
+
+	//Traverse the router tree
 	for router := s.Router.RouteHTTP(rq); ; router = router.RouteHTTP(rq) {
+
+		//If we have a nil router, serve a 404.
 		if router == nil {
 			s.HandleHTTPError(
 				Err(StatusNotFound),
@@ -112,7 +122,10 @@ func (s *Server) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 			return
 
 		}
+
+		//if the type of the router is a Handler, we can terminate
 		if hl, ok := router.(Handler); ok {
+			//defer a function to recover panics within child functions.
 			defer func() {
 				if e := recover(); e != nil {
 					s.HandleHTTPError(
@@ -124,8 +137,10 @@ func (s *Server) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 						rq,
 					)
 				}
+				return
 			}()
 
+			//serve the response.
 			hl.ServeHTTP(rw, rq)
 			return
 		}
@@ -158,13 +173,19 @@ var DefaultErrorHandler ErrorHandler = defaultErrorHandler{}
 type defaultErrorHandler struct{}
 
 func (d defaultErrorHandler) HandleHTTPError(e error, rw http.ResponseWriter, rq *http.Request) {
+	defer func() {
+		if e := recover(); e != nil {
+			log.Printf("A panic was encountered when a response was attempted %+q\n", e)
+		}
+	}()
 	rw.Header().Add(contentType, "text/plain")
-	rw.Write(errorBytes(e))
 	if v, ok := e.(ExtendedErr); ok {
-		log.Println("ERROR ("+rq.URL.String()+"):", v.Error(), v.AdditionalInformation)
+		log.Printf("ERROR ("+rq.URL.String()+"): %+q %+q\n", v.Error(), v.AdditionalInformation)
 	} else {
-		log.Println("ERROR ("+rq.URL.String()+"):", e.Error())
+		log.Printf("ERROR ("+rq.URL.String()+"): %+q\n", e.Error())
 	}
+	rw.Write(errorBytes(e))
+	return
 }
 
 func errorBytes(e error) []byte {

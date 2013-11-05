@@ -15,7 +15,7 @@ type (
 		RouteHTTP(*http.Request) Router
 	}
 
-	PathRouter interface {
+	PathingRouter interface {
 		Child(subpath string) (n Router, remainingSubpath string)
 	}
 

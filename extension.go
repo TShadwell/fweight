@@ -13,6 +13,10 @@ type Extension interface {
 		rq *http.Request) (http.ResponseWriter, *http.Request)
 }
 
+type RequestCompleteHooker interface {
+	RequestCompleted(rw http.ResponseWriter, rq *http.Request)
+}
+
 type IgnorePort struct {
 }
 
@@ -24,6 +28,11 @@ func (i IgnorePort) TransformRequest(rw http.ResponseWriter, rq *http.Request) (
 }
 
 type Compression struct {
+	compressor
+}
+
+func (c Compression) RequestCompleted(rw http.ResponseWriter, rq *http.Request) {
+	rw.(compressionWrap).Close()
 }
 
 type compressor interface {
@@ -33,14 +42,37 @@ type compressor interface {
 }
 
 type compressionWrap struct {
-	http.ResponseWriter
+	rw         http.ResponseWriter
 	compressor compressor
 }
 
+func (c compressionWrap) Close() {
+	c.compressor.Flush()
+	c.compressor.Close()
+}
+
 func (c compressionWrap) Write(b []byte) (n int, err error) {
-	defer c.compressor.Close()
-	defer c.compressor.Flush()
-	return c.compressor.Write(b)
+
+	var bt = b
+	var cnt int = 0
+	for ; cnt < len(b); bt = bt[cnt:] {
+		var thisW int
+		thisW, err = c.compressor.Write(bt)
+		cnt += thisW
+		if err != nil {
+			return cnt, err
+		}
+	}
+
+	return cnt, err
+}
+
+func (c compressionWrap) Header() http.Header {
+	return c.rw.Header()
+}
+
+func (c compressionWrap) WriteHeader(an int) {
+	c.rw.WriteHeader(an)
 }
 
 func (c Compression) TransformRequest(rw http.ResponseWriter, rq *http.Request) (http.ResponseWriter, *http.Request) {
@@ -63,6 +95,7 @@ func (c Compression) TransformRequest(rw http.ResponseWriter, rq *http.Request) 
 				}
 			}
 			if compressor != nil {
+				c.compressor = compressor
 				return compressionWrap{rw, compressor}, rq
 			}
 		}
