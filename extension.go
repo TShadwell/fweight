@@ -32,7 +32,9 @@ type Compression struct {
 }
 
 func (c Compression) RequestCompleted(rw http.ResponseWriter, rq *http.Request) {
-	rw.(compressionWrap).Close()
+	if l, ok := rw.(compressionWrap); ok{
+		l.Close()
+	}
 }
 
 type compressor interface {
@@ -47,8 +49,10 @@ type compressionWrap struct {
 }
 
 func (c compressionWrap) Close() {
-	c.compressor.Flush()
-	c.compressor.Close()
+	if c.compressor != nil {
+		c.compressor.Flush()
+		c.compressor.Close()
+	}
 }
 
 func (c compressionWrap) Write(b []byte) (n int, err error) {
