@@ -32,7 +32,7 @@ type Compression struct {
 }
 
 func (c Compression) RequestCompleted(rw http.ResponseWriter, rq *http.Request) {
-	if l, ok := rw.(compressionWrap); ok{
+	if l, ok := rw.(compressionWrap); ok {
 		l.Close()
 	}
 }

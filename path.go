@@ -85,7 +85,7 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 		var ok bool
 		if currentPathingRouter, ok = currentRouter.(PathingRouter); !ok {
 			if debug {
-				log.Println("Path routing terminated at", reflect.TypeOf(currentRouter), reflect.TypeOf(currentPathingRouter))
+				log.Printf("[-] Path routing terminated at %v [%v] and pathRouter %v [%v]", currentRouter, reflect.TypeOf(currentRouter), currentPathingRouter, reflect.TypeOf(currentPathingRouter))
 			}
 			break
 		}
@@ -100,7 +100,7 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 
 	if debug {
-		log.Printf("Currently in path %+v\n", p)
+		log.Printf("[?] Currently in path %+v\n", p)
 	}
 
 	//strip leading slashes
@@ -110,7 +110,7 @@ func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 	//is the only item left in the path, and thus we must terminate here.
 	if subpath == "" || subpath == "/" {
 		if debug {
-			log.Println("Routing into current level (path is empty).")
+			log.Println("[?] Routing into current level (path is empty).")
 		}
 		return p[""], ""
 	}
@@ -120,7 +120,7 @@ func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 	if pR, ok := p[subpath]; ok {
 		return pR, ""
 	} else if debug {
-		log.Printf("%v not wholly in %+v\n", subpath, p)
+		log.Printf("[?] %v not wholly in %+v\n", subpath, p)
 	}
 
 	//Check if the next node is present
@@ -129,18 +129,32 @@ func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 	if len(splt) > 1 {
 		if pR, ok := p[splt[0]]; ok {
 			if debug {
-				log.Printf("Routed down into %v remaining string %+q.\n", reflect.TypeOf(pR), splt[1])
+				log.Printf("[?] Routed down into %v remaining string %+q.\n", reflect.TypeOf(pR), splt[1])
 			}
 			return pR, splt[1]
 		}
 	} else if debug {
-		log.Printf("%+v too short.\n", splt)
+		log.Printf("[?] %+v too short.\n", splt)
 	}
 
 	//Check if we have a route that begins with the subpath
 	for path, pR := range p {
 		if path != "" && strings.HasPrefix(subpath, path) {
+			if debug {
+				log.Printf(
+					"[?] Routed into %v - %+q is a prefix of %+q",
+					pR,
+					path,
+					subpath,
+				)
+			}
 			return pR, strings.TrimLeft(subpath, path)
+		} else if debug {
+			log.Printf(
+				"[?] Did not reoute %+q is not a prefix of %+q",
+				path,
+				subpath,
+			)
 		}
 	}
 
