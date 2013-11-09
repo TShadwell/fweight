@@ -1,3 +1,3 @@
 package fweight
 
-const debug = true
+const debug = false
