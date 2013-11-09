@@ -125,7 +125,6 @@ func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 
 	//Check if the next node is present
 	splt := strings.SplitN(subpath, "/", 3)
-	log.Print(splt)
 	if len(splt) > 1 {
 		if pR, ok := p[splt[0]]; ok {
 			if debug {
