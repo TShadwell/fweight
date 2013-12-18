@@ -55,7 +55,7 @@ func AnyDomainThen(s SubdomainRouter) DomainRouter {
 	respecitvely. These domains are said to be "empty" because they do not resolve
 	any further than "google.com".
 */
-func SubdomainEmpty(subdomain string) bool {
+func subdomainEmpty(subdomain string) bool {
 	if subdomain == "" || strings.TrimRight(subdomain, ".") == "" {
 		return true
 	}

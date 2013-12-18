@@ -16,7 +16,7 @@ var (
 // a/b///c or a/b// can exist, which would result in final
 //strings of // or ///. These are assumed to be the same as
 //their single-slashed counterparts.
-func PathEmpty(path string) bool {
+func pathEmpty(path string) bool {
 	if path == "" || strings.TrimLeft(path, "/") == "" {
 		return true
 	}
