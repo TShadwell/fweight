@@ -21,7 +21,6 @@ func NewCompressor(h http.Handler) Compressor {
 	return Compressor{h}
 }
 
-
 var Compression Middleware = MiddlewareFunc(func(h http.Handler) http.Handler {
 	return NewCompressor(h)
 })
