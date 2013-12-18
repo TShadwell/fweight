@@ -17,11 +17,11 @@ type Compressor struct {
 	Handler http.Handler
 }
 
-func NewCompressor(h http.Handler) Compressor{
+func NewCompressor(h http.Handler) Compressor {
 	return Compressor{h}
 }
 
-func CompressionMiddleware(h http.Handler) http.Handler{
+func CompressionMiddleware(h http.Handler) http.Handler {
 	return NewCompresor(h)
 }
 
@@ -47,7 +47,7 @@ func (c Compressor) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 	}
 	defer closure()
 	var ae string
-	if ae = rq.Header.Get("Accept-Encoding"); ae == ""{
+	if ae = rq.Header.Get("Accept-Encoding"); ae == "" {
 		return
 	}
 	var compressor interface {
@@ -75,7 +75,7 @@ func (c Compressor) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 		rw.Header().Set("Content-Encoding", header)
 		closure = func() {
 			c.Handler.ServeHTTP(httpCompressor{
-				compressor: compressor,
+				compressor:     compressor,
 				ResponseWriter: rw,
 			}, rq)
 			defer compressor.Flush()

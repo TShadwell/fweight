@@ -4,14 +4,13 @@ import (
 	"net/http"
 )
 
-
 //A Pipeline represents an http.Handler wrapped by a series of
 //Middlewares.
 //
-//The resultant http.Handler is lazily computed, but can be 
+//The resultant http.Handler is lazily computed, but can be
 //(re)computed with the ReloadMiddleware function.
 type Pipeline struct {
-	Base http.Handler
+	Base     http.Handler
 	pipeline http.Handler
 	//Middleware is excecuted in slice order.
 	Middleware []Middleware
@@ -38,7 +37,7 @@ type Middleware interface {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-func(m MiddlewareFunc) Middleware(h http.Handler) http.Handler {
+func (m MiddlewareFunc) Middleware(h http.Handler) http.Handler {
 	return m(h)
 }
 

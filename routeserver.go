@@ -16,18 +16,18 @@ will still be executed.
 */
 type RouteHandler struct {
 	Router
-	NotFound func(rq *http.Request) http.Handler
+	NotFound            func(rq *http.Request) http.Handler
 	InternalServerError func(i interface{}) http.Handler
 }
 
-func (r RouteHandler) HandleNotFound(rq *http.Request) http.Handler{
+func (r RouteHandler) HandleNotFound(rq *http.Request) http.Handler {
 	if r.NotFound == nil {
 		panic(Err(StatusNotFound))
 	}
 	return r.NotFound(rq)
 }
 
-func (r RouteHandler) HandleInternalServerError(i interface{}) http.Handler{
+func (r RouteHandler) HandleInternalServerError(i interface{}) http.Handler {
 	if r.HandleInternalServerError == nil {
 		panic(Err(StatusInternalServerError))
 	}
