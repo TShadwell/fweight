@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+type PathingRouter interface {
+	Child(subpath string) (n Router, remainingSubpath string)
+}
+
 var (
 	_ PathingRouter = new(PathRouter)
 	_ Router        = new(PathRouter)
