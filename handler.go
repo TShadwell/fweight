@@ -6,14 +6,14 @@ import (
 
 //Function HandlerOf returns a Handler of a http.Handler, which
 //can be used to terminatr and handle routes.
-func HandlerOf(h http.Handler) Handler {
+func Handle(h http.Handler) Handler {
 	return Handler{
 		h,
 	}
 }
 
-func HandlerFunc(hf http.HandlerFunc) Handler {
-	return HandlerOf(hf)
+func HandleFunc(hf http.HandlerFunc) Handler {
+	return Handle(hf)
 }
 
 type Handler struct {

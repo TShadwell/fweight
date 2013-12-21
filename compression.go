@@ -4,6 +4,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -42,12 +43,19 @@ func (h httpCompressor) Write(b []byte) (int, error) {
 }
 
 func (c Compressor) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
-	var closure = func() {
-		c.Handler.ServeHTTP(rw, rq)
-	}
-	defer closure()
+	var dontRecover bool
+	defer func() {
+		log.Println("[?] Compressor recovery closure running.")
+		if !dontRecover {
+			log.Println("[?] Compressor recovery closure running- recovering.")
+			c.Handler.ServeHTTP(rw, rq)
+		}
+	}()
 	var ae string
 	if ae = rq.Header.Get("Accept-Encoding"); ae == "" {
+		if debug {
+			log.Printf("[?] Not compressing - no Accept-Encoding specified. Headers were: %+v", rq.Header)
+		}
 		return
 	}
 	var compressor interface {
@@ -56,11 +64,13 @@ func (c Compressor) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 		Flush() error
 	}
 	var header string
+LOOP:
 	for _, encoding := range strings.Split(strings.ToLower(ae), ",") {
 		switch encoding {
 		case "gzip":
 			compressor = gzip.NewWriter(rw)
 			header = "gzip"
+			break LOOP
 		case "deflate":
 			var err error
 			if compressor, err = flate.NewWriter(rw, -1); err != nil {
@@ -68,18 +78,27 @@ func (c Compressor) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 			} else {
 				header = "deflate"
 			}
+			break LOOP
 		}
 	}
 
 	if compressor != nil {
 		rw.Header().Set("Content-Encoding", header)
-		closure = func() {
-			c.Handler.ServeHTTP(httpCompressor{
-				compressor:     compressor,
-				ResponseWriter: rw,
-			}, rq)
-			defer compressor.Flush()
-			defer compressor.Close()
+		if debug {
+			log.Println("[?] Responding with Content-Encoding " + header + ".")
 		}
+		dontRecover = true
+		c.Handler.ServeHTTP(httpCompressor{
+			compressor:     compressor,
+			ResponseWriter: rw,
+		}, rq)
+		if err := compressor.Flush(); err != nil {
+			panic(err)
+		}
+		if err := compressor.Close(); err != nil {
+			panic(err)
+		}
+	} else if debug {
+		log.Printf("[?] No acceptable `Accept-Encoding`s - choices were: %+q", ae)
 	}
 }

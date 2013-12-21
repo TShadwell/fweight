@@ -104,7 +104,7 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 
 	if debug {
-		log.Printf("[?] Currently in path %+v\n", p)
+		log.Printf("[?] Currently in path %+v, with requested path %+q \n", p, subpath)
 	}
 
 	//strip leading slashes
