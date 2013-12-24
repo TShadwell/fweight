@@ -3,6 +3,7 @@ package fweight
 import (
 	"log"
 	"net/http"
+	Path "path"
 	"reflect"
 	"strings"
 )
@@ -15,17 +16,6 @@ var (
 	_ PathingRouter = new(PathRouter)
 	_ Router        = new(PathRouter)
 )
-
-//Func PathIsEmpty accounts for the fact that paths like
-// a/b///c or a/b// can exist, which would result in final
-//strings of // or ///. These are assumed to be the same as
-//their single-slashed counterparts.
-func pathEmpty(path string) bool {
-	if path == "" || strings.TrimLeft(path, "/") == "" {
-		return true
-	}
-	return false
-}
 
 //Type Path is a Router which routes by URL path. Files or directories
 //with empty names are not allowed. The empty name routes to the terminal
@@ -83,6 +73,8 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 		currentRouter        Router
 	)
 
+	//fix paths
+	path = Path.Clean(path)
 	for {
 		currentRouter, path = currentPathingRouter.Child(path)
 

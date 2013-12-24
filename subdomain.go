@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path"
 	"reflect"
 	"strings"
 )
@@ -131,6 +132,14 @@ func (s SubdomainRouter) RouteHTTP(rq *http.Request) Router {
 		domain           string       = rq.Host
 		currentRouter    Router
 	)
+	//Remove port
+	if subp := strings.SplitN(domain, ":", 2); len(subp) > 1 {
+		domain = subp[0]
+	}
+
+	//fix odd domains (x.com..x)
+	domain = strings.Replace(path.Clean(strings.Replace(domain, ".", "/", -1)), "/", ".", -1)
+
 	for {
 		currentRouter, domain = currentSubdomain.Subdomain(domain)
 
@@ -166,14 +175,6 @@ func debRoute(ty, message string, v interface{}) {
 }
 
 func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {
-
-	//Remove extra "empty" domains.
-	subpath = strings.TrimRight(subpath, ".")
-
-	//Remove port
-	if subp := strings.SplitN(subpath, ":", 2); len(subp) > 1 {
-		subpath = subp[0]
-	}
 
 	//Check if we have bound a handler for the entire remaining route.
 	if sD, ok := s[subpath]; ok {
