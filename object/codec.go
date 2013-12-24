@@ -1,10 +1,34 @@
-package object
-
 /*
-	a := Archetype {
-		"text/plain":plain,
-	}
+	Package object provides a mime-independant
+	abstraction for writing handlers.
+		var Archetype = object.Archetype{
+			"application/json": Json,
+			"application/xml":  Xml,
+		}
+
+		type someInformation struct {
+			X string
+		}
+
+		hn := Archetype.Router(GetterFunc(func(rq *http.Request) interface{}{
+			return someInformation{
+				X: "words",
+			}
+		}))
+
+		//[...]
+
+		hn.RouteHTTP(rq).ServeHTTP(rw, rq)
+
+		//or use framework eight
+
+		fw.DomainRouter{
+			"localhost": fw.PathRouter{
+				"user": hn,
+			}
+		}
 */
+package object
 
 import (
 	"bytes"
@@ -26,13 +50,13 @@ type (
 )
 
 type Getter interface {
-	Get() interface{}
+	Get(*http.Request) interface{}
 }
 
-type GetterFunc func() interface{}
+type GetterFunc func(*http.Request) interface{}
 
-func (g GetterFunc) Get() interface{} {
-	return g()
+func (g GetterFunc) Get(r *http.Request) interface{} {
+	return g(r)
 }
 
 type ErrorGetter interface {
@@ -123,7 +147,7 @@ func (m MarshalRouter) RouteHTTP(rq *http.Request) fweight.Router {
 		panic(err)
 	}
 	return fweight.HandleFunc(func(rw http.ResponseWriter, rq *http.Request) {
-		data, contentType, err := mf(m.Get(), mt, params)
+		data, contentType, err := mf(m.Get(rq), mt, params)
 		if err != nil {
 			panic(err)
 		}
@@ -186,9 +210,4 @@ var Xml MarshalFunc = func(v interface{}, _ MediaType,
 		panic(err)
 	}
 	return
-}
-
-var DefaultArchetype = Archetype{
-	"application/json": Json,
-	"application/xml":  Xml,
 }
