@@ -37,19 +37,6 @@ type wildcardDomain struct {
 	SubdomainRouter
 }
 
-//	Function AnyDomainThen wraps wildcardDomain:
-//	if Router d represented the DomainRouter "a.b",
-//	AnyDomainThen represents domains matching
-//	"*.a.b".
-//
-//	Correspondigly, if d represented the PathRouter
-//	"a/b", AnyDomainThen(d) represents "*/a/b"
-func AnyDomainThen(s SubdomainRouter) DomainRouter {
-	return wildcardDomain{
-		s,
-	}
-}
-
 /*
 	Because of the way the DNS works, domains such as ., .. or ... are valid,
 	coming from addresses like "google.com.", "google.com.." and "google.com..."
