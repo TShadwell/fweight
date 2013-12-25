@@ -114,15 +114,17 @@ func (s RouteHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 		//if the type of the router is a Handler, we can terminate
 		if hl, ok := router.(Handler); ok {
 			//defer a function to recover panics within child functions.
-			defer func() {
-				if e := recover(); e != nil {
-					if debug {
-						fmt.Printf("[!] Recovered from panic %v\n")
+			if !failOnPanic {
+				defer func() {
+					if e := recover(); e != nil {
+						if debug {
+							fmt.Printf("[!] Recovered from panic %v\n", e)
+						}
+						s.HandleInternalServerError(e).ServeHTTP(rw, rq)
 					}
-					s.HandleInternalServerError(e).ServeHTTP(rw, rq)
-				}
-				return
-			}()
+					return
+				}()
+			}
 
 			//serve the response.
 			hl.ServeHTTP(rw, rq)
