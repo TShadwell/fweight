@@ -75,6 +75,11 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 
 	//fix paths
 	path = Path.Clean(path)
+
+	//We break spec a bit to allow directories called "."
+	if path == "." {
+		path = ""
+	}
 	for {
 		currentRouter, path = currentPathingRouter.Child(path)
 

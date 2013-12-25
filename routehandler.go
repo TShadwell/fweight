@@ -103,6 +103,9 @@ func (s RouteHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 
 		//If we have a nil router, serve a 404.
 		if router == nil {
+			if debug {
+				fmt.Println("[!] Routing failed. Serving 404.")
+			}
 			s.HandleNotFound(rq).ServeHTTP(rw, rq)
 			return
 
@@ -113,6 +116,9 @@ func (s RouteHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 			//defer a function to recover panics within child functions.
 			defer func() {
 				if e := recover(); e != nil {
+					if debug {
+						fmt.Printf("[!] Recovered from panic %v\n")
+					}
 					s.HandleInternalServerError(e).ServeHTTP(rw, rq)
 				}
 				return
