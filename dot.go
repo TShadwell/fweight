@@ -11,7 +11,7 @@ import (
 //a middleware that adds the extension's media type
 //to the ContentType of the request, and removes the extension.
 var DotContent Middleware = MiddlewareFunc(func(h http.Handler) http.Handler {
-	const ctt = "Content-Type"
+	const ctt = "Accept"
 	return http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
 		defer h.ServeHTTP(rw, rq)
 		//attempt to get extension
@@ -32,7 +32,7 @@ var DotContent Middleware = MiddlewareFunc(func(h http.Handler) http.Handler {
 			rq.Header[ctt][0] = strings.TrimRight(typ+rq.Header[ctt][0], ",")
 			return
 		}
-		rq.Header["Content-Type"] = []string{
+		rq.Header[ctt] = []string{
 			typ,
 		}
 	})

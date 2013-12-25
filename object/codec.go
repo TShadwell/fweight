@@ -34,13 +34,31 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"github.com/TShadwell/fweight"
 	htmltemplate "html/template"
+	"log"
 	"net/http"
 	"path"
 	"strings"
+	"sync"
 	texttemplate "text/template"
 )
+
+var once sync.Once
+
+var defaultArchetype Archetype
+
+var DefaultArchetype = func() Archetype {
+	once.Do(func() {
+		defaultArchetype = Archetype{
+			"":                 Json,
+			"application/json": Json,
+			"application/xml":  Xml,
+		}
+	})
+	return defaultArchetype
+}
 
 type MarshalFunc func(v interface{}, m MediaType,
 	params map[string]string) (data []byte, contentType string, err error)
@@ -117,19 +135,28 @@ func (m MarshalRouter) marshalFunc(mt MediaType) (mf MarshalFunc) {
 		return
 	}
 
+	if mf, ok = m.Archetype[mt]; mt == "" && (!ok) {
+		panic(fmt.Sprintf("No appropriate handler and no fallback -- %+v", m.Archetype))
+	}
+
 	return m.Archetype[mt]
 }
 
 func (m MarshalRouter) mime(r *http.Request) (mf MarshalFunc, mt MediaType, params map[string]string, err error) {
-	if ct, ok := r.Header["Content-Type"]; ok && (len(ct) > 0) {
+	if ct, ok := r.Header["Accept"]; ok && (len(ct) > 0) {
 		var cts []contentType
+
 		cts, err = parseContentType(ct[0])
 		if err != nil {
 			return
 		}
 
+		if debug {
+			log.Printf("Recieved Accept types: %+v\n", cts)
+		}
+
 		for _, v := range cts {
-			if m.marshalFunc(v.mediaType) != nil {
+			if mf = m.marshalFunc(v.mediaType); mf != nil {
 				mt = v.mediaType
 				params = v.params
 				break
