@@ -38,6 +38,7 @@ import (
 	"github.com/TShadwell/fweight"
 	htmltemplate "html/template"
 	"log"
+	"mime"
 	"net/http"
 	"path"
 	"strings"
@@ -47,14 +48,16 @@ import (
 
 var once sync.Once
 
-var defaultArchetype Archetype
+var defaultArchetype *Archetype
 
-var DefaultArchetype = func() Archetype {
+var DefaultArchetype = func() *Archetype {
 	once.Do(func() {
-		defaultArchetype = Archetype{
-			"":                 Json,
-			"application/json": Json,
-			"application/xml":  Xml,
+		defaultArchetype = &Archetype{
+			ContentMarshaler: ContentMarshaler{
+				"":                 Json,
+				"application/json": Json,
+				"application/xml":  Xml,
+			},
 		}
 	})
 	return defaultArchetype
@@ -86,11 +89,13 @@ type ErrorGetter interface {
 type ContentMarshaler map[MediaType]MarshalFunc
 
 //the Archetype shadows MarshalRouters.
-type Archetype ContentMarshaler
+type Archetype struct {
+	ContentMarshaler
+}
 
 func (a Archetype) Router(g Getter) MarshalRouter {
 	return MarshalRouter{
-		Archetype:        a,
+		Archetype:        &a,
 		ContentMarshaler: nil,
 		Getter:           g,
 	}
@@ -98,7 +103,7 @@ func (a Archetype) Router(g Getter) MarshalRouter {
 
 //MarshalRouter implements a http.Handler and a fweight.Router.
 type MarshalRouter struct {
-	Archetype Archetype
+	Archetype *Archetype
 	ContentMarshaler
 	Getter
 }
@@ -124,7 +129,7 @@ func (m MarshalRouter) marshalFunc(mt MediaType) (mf MarshalFunc) {
 			}
 		}
 
-		for k, v := range m.Archetype {
+		for k, v := range m.Archetype.ContentMarshaler {
 			if ok, _ := path.Match(pattern, string(k)); ok {
 				return v
 			}
@@ -135,19 +140,48 @@ func (m MarshalRouter) marshalFunc(mt MediaType) (mf MarshalFunc) {
 		return
 	}
 
-	if mf, ok = m.Archetype[mt]; mt == "" && (!ok) {
+	if mf, ok = m.Archetype.ContentMarshaler[mt]; mt == "" && (!ok) {
 		panic(fmt.Sprintf("No appropriate handler and no fallback -- %+v", m.Archetype))
 	}
 
-	return m.Archetype[mt]
+	return m.Archetype.ContentMarshaler[mt]
 }
 
 func (m MarshalRouter) mime(r *http.Request) (mf MarshalFunc, mt MediaType, params map[string]string, err error) {
+
+	const ctt = "Accept"
+
+	switch {
+	case true:
+		ext := path.Ext(r.URL.Path)
+		if ext == "" {
+			break
+		}
+
+		typ := mime.TypeByExtension(ext)
+		if typ == "" {
+			break
+		}
+
+		if v, ok := r.Header[ctt]; ok && (len(v) > 0) {
+			r.Header[ctt][0] = strings.TrimRight(typ+","+r.Header[ctt][0], ",")
+			break
+		}
+
+		r.Header[ctt] = []string{
+			typ,
+		}
+
+	}
 	if ct, ok := r.Header["Accept"]; ok && (len(ct) > 0) {
+
 		var cts []contentType
 
 		cts, err = parseContentType(ct[0])
 		if err != nil {
+			if debug {
+				log.Printf("Failed processing MIME type %+q:", ct[0])
+			}
 			return
 		}
 

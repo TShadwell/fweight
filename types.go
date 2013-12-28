@@ -13,4 +13,9 @@ type (
 	Router interface {
 		RouteHTTP(*http.Request) Router
 	}
+	RouterFunc func(*http.Request) Router
 )
+
+func (r RouterFunc) RouteHTTP(rq *http.Request) Router {
+	return r(rq)
+}

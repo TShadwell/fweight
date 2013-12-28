@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+//A PathingRouter is part of the filepath, and can take part
+//in the descent of the filepath trie.
 type PathingRouter interface {
 	Child(subpath string) (n Router, remainingSubpath string)
 }
@@ -16,6 +18,29 @@ var (
 	_ PathingRouter = new(PathRouter)
 	_ Router        = new(PathRouter)
 )
+
+//IgnoreExtensions is a PathRouter that ignores
+//the extensions of folders and files when matching
+//request URIs.
+type IgnoreExtensions PathRouter
+
+func (i IgnoreExtensions) underlying() PathRouter {
+	return PathRouter(i)
+}
+
+func (i IgnoreExtensions) Child(subpath string) (Router, string) {
+	return i.underlying().ChildProcess(
+		subpath,
+		func(s string) string {
+			ext := Path.Ext(s)
+			return strings.TrimSuffix(s, ext)
+		},
+	)
+}
+
+func (i IgnoreExtensions) RouteHTTP(r *http.Request) Router {
+	return PathingRouterRouteHTTP(i, r)
+}
 
 //Type Path is a Router which routes by URL path. Files or directories
 //with empty names are not allowed. The empty name routes to the terminal
@@ -61,9 +86,8 @@ func isPathRouter(r Router) (b bool) {
 	return
 }
 
-//RouteHTTP traverses the tree of Paths until the end of the URL path
-//is encountered, returning the terminal router or nil.
-func (p PathRouter) RouteHTTP(rq *http.Request) Router {
+//Performs RouteHTTP on a trie of PathingRouters.
+func PathingRouterRouteHTTP(p PathingRouter, rq *http.Request) Router {
 	/*
 		Now like SubdomainRouter!
 	*/
@@ -76,7 +100,7 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 	//fix paths
 	path = Path.Clean(path)
 
-	//We break spec a bit to allow directories called "."
+	//We break spec a bit to allow direcories called "."
 	if path == "." {
 		path = ""
 	}
@@ -96,9 +120,25 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 	return currentRouter
 }
 
+//RouteHTTP traverses the tree of Paths until the end of the URL path
+//is encountered, returning the terminal router or nil.
+func (p PathRouter) RouteHTTP(rq *http.Request) Router {
+	return PathingRouterRouteHTTP(p, rq)
+}
+
+func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
+	return p.ChildProcess(subpath, nil)
+}
+
 //Function Child returns the next Router associated with the next
 //'hop' in the path.
-func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
+func (p PathRouter) ChildProcess(subpath string, process func(string) string) (n Router, remainingSubpath string) {
+
+	if process == nil {
+		process = func(s string) string {
+			return s
+		}
+	}
 
 	if debug {
 		log.Printf("[?] Currently in path %+v, with requested path %+q \n", p, subpath)
@@ -116,18 +156,20 @@ func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 		return p[""], ""
 	}
 
+	processedSubpath := process(subpath)
+
 	//First, check if we have bound a handler for this whole
 	//subpath (a/b/c)
-	if pR, ok := p[subpath]; ok {
+	if pR, ok := p[processedSubpath]; ok {
 		return pR, ""
 	} else if debug {
 		log.Printf("[?] %v not wholly in %+v\n", subpath, p)
 	}
 
 	//Check if the next node is present
-	splt := strings.SplitN(subpath, "/", 3)
+	splt := strings.SplitN(subpath, "/", 2)
 	if len(splt) > 1 {
-		if pR, ok := p[splt[0]]; ok {
+		if pR, ok := p[process(splt[0])]; ok {
 			if debug {
 				log.Printf("[?] Routed down into %v remaining string %+q.\n", reflect.TypeOf(pR), splt[1])
 			}
@@ -138,25 +180,28 @@ func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 	}
 
 	//Check if we have a route that begins with the subpath
-	for path, pR := range p {
-		if path != "" && strings.HasPrefix(subpath, path) {
-			if debug {
+	/*
+		for path, pR := range p {
+			if path != "" && strings.HasPrefix(processedSubpath, path) {
+				if debug {
+					log.Printf(
+						"[?] Routed into %v - %+q is a prefix of %+q",
+						pR,
+						path,
+						subpath,
+					)
+				}
+				return pR, strings.TrimLeft(subpath, path)
+			} else if debug {
 				log.Printf(
-					"[?] Routed into %v - %+q is a prefix of %+q",
-					pR,
+					"[?] Did not reoute %+q is not a prefix of %+q",
 					path,
 					subpath,
 				)
 			}
-			return pR, strings.TrimLeft(subpath, path)
-		} else if debug {
-			log.Printf(
-				"[?] Did not reoute %+q is not a prefix of %+q",
-				path,
-				subpath,
-			)
 		}
-	}
+		//I actually have no idea what this does
+	*/
 
 	//Not Found.
 	return nil, subpath
