@@ -241,7 +241,7 @@ func HTMLTemplate(t *htmltemplate.Template) MarshalFunc {
 func TextTemplate(t *texttemplate.Template) MarshalFunc {
 	return func(v interface{}, _ MediaType,
 		_ map[string]string) (data []byte, contentType string, err error) {
-		contentType = "text/html;charset=utf8"
+		contentType = "text/plain;charset=utf8"
 		var bf bytes.Buffer
 		err = t.Execute(&bf, v)
 		if err != nil {
