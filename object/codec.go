@@ -18,7 +18,7 @@
 
 		//[...]
 
-		hn.RouteHTTP(rq).ServeHTTP(rw, rq)
+		hn.ServeHTTP(rw, rq)
 
 		//or use framework eight
 
@@ -123,7 +123,7 @@ func (m MarshalRouter) marshalFunc(mt MediaType) (mf MarshalFunc) {
 		}
 
 		for k, v := range m.ContentMarshaler {
-			//impossible to produce malformatted pattern
+			//impossible to produce malformed pattern
 			if ok, _ := path.Match(pattern, string(k)); ok {
 				return v
 			}
@@ -218,6 +218,10 @@ func (m MarshalRouter) RouteHTTP(rq *http.Request) fweight.Router {
 			panic(err)
 		}
 	})
+}
+
+func (m MarshalRouter) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
+	m.RouteHTTP(rq).(fweight.Handler).ServeHTTP(rw, rq)
 }
 
 //HTMLTemplate returns a MarshalFunc that executes the data on template `t` using the html/template
