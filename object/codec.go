@@ -229,7 +229,7 @@ func HTMLTemplate(t *htmltemplate.Template) MarshalFunc {
 		var bf bytes.Buffer
 		err = t.Execute(&bf, v)
 		if err != nil {
-			panic(err)
+			return
 		}
 		data = bf.Bytes()
 		return
@@ -245,7 +245,7 @@ func TextTemplate(t *texttemplate.Template) MarshalFunc {
 		var bf bytes.Buffer
 		err = t.Execute(&bf, v)
 		if err != nil {
-			panic(err)
+			return
 		}
 		data = bf.Bytes()
 		return
@@ -256,9 +256,6 @@ var Json MarshalFunc = func(v interface{}, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 	contentType = "application/json;charset=utf8"
 	data, err = json.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
 	return
 }
 
@@ -267,8 +264,5 @@ var Xml MarshalFunc = func(v interface{}, _ MediaType,
 
 	contentType = "application/xml"
 	data, err = xml.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
 	return
 }
