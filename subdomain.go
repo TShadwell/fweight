@@ -94,9 +94,10 @@ func (s SubdomainRouter) here() Router {
 
 func removeSubdomain(subd, path string) (s string) {
 	s = strings.TrimSuffix(path, subd)
-	if len(s) > 0 && s[0] == '.' {
-		s = s[1:]
+	if len(s) > 0 {
+		s = strings.Trim(s, ".")
 	}
+
 	return
 }
 
@@ -128,6 +129,9 @@ func (s SubdomainRouter) RouteHTTP(rq *http.Request) Router {
 	domain = strings.Replace(path.Clean(strings.Replace(domain, ".", "/", -1)), "/", ".", -1)
 
 	for {
+		if debug {
+			log.Printf("Route is now %+q\n", domain)
+		}
 		currentRouter, domain = currentSubdomain.Subdomain(domain)
 
 		var ok bool
