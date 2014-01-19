@@ -32,6 +32,7 @@ package object
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -260,6 +261,7 @@ var Json MarshalFunc = func(v interface{}, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 	contentType = "application/json;charset=utf8"
 	data, err = json.Marshal(v)
+
 	return
 }
 
@@ -268,5 +270,19 @@ var Xml MarshalFunc = func(v interface{}, _ MediaType,
 
 	contentType = "application/xml"
 	data, err = xml.Marshal(v)
+	return
+}
+
+var Gob MarshalFunc = func(v interface{}, _ MediaType,
+	_ map[string]string) (data []byte, contentType string, err error) {
+
+	contentType = "application/gob"
+	var buf bytes.Buffer
+	err = gob.NewEncoder(&buf).Encode(v)
+	if err != nil {
+		return
+	}
+
+	data = buf.Bytes()
 	return
 }

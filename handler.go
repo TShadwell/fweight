@@ -16,6 +16,7 @@ func HandleFunc(hf http.HandlerFunc) Handler {
 	return Handle(hf)
 }
 
+//A handler represents a termination of the Router B+ tree.
 type Handler struct {
 	http.Handler
 }

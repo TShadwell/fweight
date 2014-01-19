@@ -74,7 +74,7 @@ func newFlate(r io.Writer) (c compressor) {
 /*
 	Compressor implements a http.Handler that provides an intelligent
 	compression middleware, detecting and leveraging acceptable
-	Content-Encodings.
+	Content-Encodings, it currently supports gzip and deflate.
 */
 var Compression Middleware = MiddlewareFunc(compressionMiddleware)
 

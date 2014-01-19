@@ -28,6 +28,8 @@ func (i IgnoreExtensions) underlying() PathRouter {
 	return PathRouter(i)
 }
 
+//Function Child is provided by all types implementing the PathingRouter
+//interface.
 func (i IgnoreExtensions) Child(subpath string) (Router, string) {
 	return i.underlying().ChildProcess(
 		subpath,
@@ -126,6 +128,7 @@ func (p PathRouter) RouteHTTP(rq *http.Request) Router {
 	return PathingRouterRouteHTTP(p, rq)
 }
 
+//Function Child is provided by all types that implement the PathingRouter interface.
 func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
 	return p.ChildProcess(subpath, nil)
 }
