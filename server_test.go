@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,17 +26,76 @@ func TestWorking(t *testing.T) {
 	}
 }
 
+func TestSubdomains(t *testing.T) {
+	if err := test(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+var random = rand.New(rand.NewSource(3478001))
+
+func wantThis() (hnd Handler, pass func([]byte) bool) {
+	buf := make([]byte, 100, 100)
+	for i := range buf {
+		buf[i] = uint8(random.Intn(8))
+	}
+	hnd = HandleFunc(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		_, err := rw.Write(buf)
+		if err != nil {
+			panic(err)
+		}
+	}))
+
+	pass = func(b []byte) bool {
+		return bytes.Equal(b, buf)
+	}
+
+	return
+}
+
+func testSubdomains() (err error) {
+
+	hnd1, tf1 := wantThis()
+	hnd2, tf2 := wantThis()
+
+	rt := SubdomainRouter{
+		"any": hnd1,
+		"many": SubdomainRouter{
+			"all": hnd2,
+		},
+	}
+
+	p := RouteHandler{
+		Router: SubdomainRouter{
+			"cool.com": rt,
+		},
+		NotFound: NotFound,
+		Recover:  HandleRecovery,
+	}
+
+	if err = Expected(&p, "http://any.cool.com", tf1); err != nil {
+		return
+	}
+
+	if err = Expected(&p, "http://all.many.cool.com", tf2); err != nil {
+		return
+	}
+
+	return
+
+}
+
 func test() (err error) {
-	const (
-		aresp plainHandler = "hi this is a"
-		bresp plainHandler = "hi this is b"
-	)
+
+	hnd1, tf1 := wantThis()
+	hnd2, tf2 := wantThis()
+
 	p := Pipeline{
 		Base: RouteHandler{
 			Router: PathRouter{
-				"a": Handle(aresp),
+				"a": hnd1,
 				"jo": PathRouter{
-					"b": Handle(bresp),
+					"b": hnd2,
 				},
 			},
 			NotFound: NotFound,
@@ -46,11 +106,11 @@ func test() (err error) {
 			Compression,
 		},
 	}
-	if err = Expected(&p, "http://anything/a", []byte(aresp)); err != nil {
+	if err = Expected(&p, "http://anything/a", tf1); err != nil {
 		return
 	}
 
-	if err = Expected(&p, "http://anything/jo/b", []byte(bresp)); err != nil {
+	if err = Expected(&p, "http://anything/jo/b", tf2); err != nil {
 		return
 	}
 
@@ -76,15 +136,14 @@ func technicalInformation(rq *http.Request) string {
 }
 
 func Expected(h http.Handler,
-	url string, expected []byte) (err error) {
+	url string, expected func([]byte) bool) (err error) {
 	r := httptest.NewRecorder()
 	rq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return
 	}
 	h.ServeHTTP(r, rq)
-	fmt.Printf("%+v\n", r.HeaderMap)
-	if r.Code != int(StatusOK) || !bytes.Equal(r.Body.Bytes(), expected) {
+	if r.Code != int(StatusOK) || !expected(r.Body.Bytes()) {
 		return errors.New(fmt.Sprintf("Failed with code %d - expected %+q recieved %+q\n"+technicalInformation(rq), r.Code, expected, r.Body.Bytes()))
 	}
 	return
