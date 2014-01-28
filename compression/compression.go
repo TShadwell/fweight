@@ -19,9 +19,9 @@ type (
 	Compression func(io.Writer) Compressor
 )
 
-var compressions = map[string]Compression {
-	"gzip":Gzip,
-	"flate":Flate,
+var compressions = map[string]Compression{
+	"gzip":  Gzip,
+	"flate": Flate,
 }
 
 var rwm sync.RWMutex
@@ -73,21 +73,17 @@ func (w writer) flush() {
 		panic(err)
 	}
 
-
 	w.rw.WriteHeader(w.i)
 }
 
 var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//this handler excecutes whether we compress or not.
-		funcs := [2]func() {func(){
-			h.ServeHTTP(w, r)
-		}, nil}
+		var flush func()
+
 		defer func() {
-			for _, f := range funcs {
-				if f != nil {
-					f()
-				}
+			h.ServeHTTP(w, r)
+			if flush != nil {
+				flush()
 			}
 		}()
 
@@ -115,8 +111,8 @@ var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
 		ow := w
 
 		//create our writer, which compresses.
-		uw := writer {
-			rw: ow,
+		uw := writer{
+			rw:         ow,
 			Compressor: compression(ow),
 		}
 
@@ -126,7 +122,7 @@ var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
 		w.Header().Set("Content-Encoding", encoding)
 
 		//once it's written to our writer, flush it
-		funcs[1] = uw.flush
+		flush = uw.flush
 	})
 })
 
