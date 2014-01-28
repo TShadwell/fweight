@@ -165,6 +165,8 @@ func debRoute(ty, message string, v interface{}) {
 	fmt.Printf("%+q, %+q, %+q\n", ty, message, targetS)
 }
 
+//Function Subdomain is provided by all types implementing the
+//SubdomainRouter interface.
 func (s SubdomainRouter) Subdomain(subpath string) (Router, string) {
 
 	//Check if we have bound a handler for the entire remaining route.

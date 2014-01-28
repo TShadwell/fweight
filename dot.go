@@ -10,6 +10,9 @@ import (
 //DotContent implements a http.Handler that provides
 //a middleware that adds the extension's media type
 //to the ContentType of the request, and removes the extension.
+//
+//This is not needed for the object package, it does this as part of
+//the processing of the request, instead use the IgnoreExtensions Router.
 var DotContent Middleware = MiddlewareFunc(func(h http.Handler) http.Handler {
 	const ctt = "Accept"
 	return http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
