@@ -53,7 +53,6 @@ func Flate(r io.Writer) (c Compressor) {
 type writer struct {
 	rw http.ResponseWriter
 	Compressor
-	i int
 }
 
 func (w writer) Header() http.Header {
@@ -65,7 +64,7 @@ func (w writer) Write(b []byte) (int, error) {
 }
 
 func (w writer) WriteHeader(i int) {
-	w.i = i
+	w.rw.WriteHeader(i)
 }
 
 func (w writer) flush() {
@@ -73,7 +72,6 @@ func (w writer) flush() {
 		panic(err)
 	}
 
-	w.rw.WriteHeader(w.i)
 }
 
 var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
