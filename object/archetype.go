@@ -1,6 +1,7 @@
 package object
 
 import (
+	"github.com/TShadwell/fweight"
 	"net/http"
 	"sync"
 )
@@ -25,6 +26,15 @@ func (a *Archetype) Handler() Handler {
 	}
 }
 
+func (a *Archetype) Router(g Getter) HTTPHandler {
+	return HTTPHandler{
+		Getter: g,
+		Handler: Handler{
+			Archetype: a,
+		},
+	}
+}
+
 type HTTPHandler struct {
 	Getter
 	Handler
@@ -32,6 +42,10 @@ type HTTPHandler struct {
 
 func (h HTTPHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 	h.Handler.ServeObject(h.Getter.Get(rq), rw, rq)
+}
+
+func (h HTTPHandler) RouteHTTP(_ *http.Request) fweight.Router {
+	return fweight.Handle(h)
 }
 
 type Handler struct {

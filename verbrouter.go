@@ -4,6 +4,12 @@ import (
 	"net/http"
 )
 
+func GetOnly(r Router) Router {
+	return VerbRouter{
+		"GET": r,
+	}
+}
+
 var _ Router = make(VerbRouter)
 
 var OptionsHandler func(i interface{}, rw http.ResponseWriter, rq *http.Request)
@@ -11,7 +17,17 @@ var OptionsHandler func(i interface{}, rw http.ResponseWriter, rq *http.Request)
 func (v VerbRouter) RouteHTTP(rq *http.Request) Router {
 	if OptionsHandler != nil && rq.Method == "OPTIONS" {
 		return Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
-			OptionsHandler(v, rw, rq)
+			ops := make([]string, len(v))
+			if OptionsHandler != nil {
+				ops = append(ops, "OPTIONS")
+			}
+			var i uint
+			for k := range v {
+				ops[i] = k
+				i++
+			}
+
+			OptionsHandler(ops, rw, rq)
 		}))
 	}
 	return v.self()[rq.Method]
