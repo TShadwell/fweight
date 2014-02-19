@@ -6,10 +6,18 @@ import (
 
 var _ Router = make(VerbRouter)
 
+var OptionsHandler func(i interface{}, rw http.ResponseWriter, rq *http.Request)
+
 func (v VerbRouter) RouteHTTP(rq *http.Request) Router {
+	if OptionsHandler != nil && rq.Method == "OPTIONS" {
+		return Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
+			OptionsHandler(v, rw, rq)
+		}))
+	}
 	return v.self()[rq.Method]
 }
 
+//A Router that routes based on verbs and provides
 type VerbRouter map[string]Router
 
 func (p VerbRouter) self() map[string]Router {
