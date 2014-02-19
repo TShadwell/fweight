@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func GetOnly(r Router) Router {
+func GetOnly(r Router) VerbRouter {
 	return VerbRouter{
 		"GET": r,
 	}
@@ -13,24 +13,36 @@ func GetOnly(r Router) Router {
 var _ Router = make(VerbRouter)
 
 var OptionsHandler func(i interface{}, rw http.ResponseWriter, rq *http.Request)
+var MethodNotAllowed func(i interface{}, rw http.ResponseWriter, rq *http.Request)
+
+func (v VerbRouter) Verbs() (ops []string) {
+	ops = make([]string, len(v))
+	if OptionsHandler != nil {
+		ops = append(ops, "OPTIONS")
+	}
+	var i uint
+	for k := range v {
+		ops[i] = k
+		i++
+	}
+	return
+}
 
 func (v VerbRouter) RouteHTTP(rq *http.Request) Router {
 	if OptionsHandler != nil && rq.Method == "OPTIONS" {
 		return Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
-			ops := make([]string, len(v))
-			if OptionsHandler != nil {
-				ops = append(ops, "OPTIONS")
-			}
-			var i uint
-			for k := range v {
-				ops[i] = k
-				i++
-			}
-
-			OptionsHandler(ops, rw, rq)
+			OptionsHandler(v.Verbs(), rw, rq)
 		}))
 	}
-	return v.self()[rq.Method]
+	if r := v.self()[rq.Method]; r != nil {
+		return r
+	} else {
+		return Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
+			rw.WriteHeader(405)
+
+			MethodNotAllowed(v.Verbs(), rw, rq)
+		}))
+	}
 }
 
 //A Router that routes based on verbs and provides

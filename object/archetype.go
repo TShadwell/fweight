@@ -90,3 +90,13 @@ func (h Handler) ServeObject(o interface{}, rw http.ResponseWriter, rq *http.Req
 	rw.Header().Add("Content-Type", ctt)
 	rw.Write(dt)
 }
+
+/*
+Function BindFweight binds this Archetype to Fweight's OptionsHandler
+and MethodNotAllowed handlers.
+*/
+func (a *Archetype) Bind() {
+	hnd := a.Handler()
+	fweight.OptionsHandler = hnd.ServeObject
+	fweight.MethodNotAllowed = hnd.ServeObject
+}

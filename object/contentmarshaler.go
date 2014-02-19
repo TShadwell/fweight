@@ -107,8 +107,10 @@ func Marshaler(cs []ContentMarshaler, cts ...ContentType) (mf MarshalFunc, ct Co
 		patt := restricted(string(ct.MediaType))
 		for _, c := range cs {
 			for k, mf = range c {
-				if ok, _ := path.Match(patt, string(k)); ok {
-					return
+				if k != "" {
+					if ok, _ := path.Match(patt, string(k)); ok {
+						return
+					}
 				}
 			}
 		}
@@ -138,6 +140,7 @@ func RequestMarshaler(r *http.Request, cs ...ContentMarshaler) (mf MarshalFunc, 
 		types = append([]ContentType{{MediaType: MediaType(m)}}, types...)
 	}
 
-	return Marshaler(cs, types...)
+	mf, c = Marshaler(cs, types...)
+	return
 
 }
