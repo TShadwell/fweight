@@ -7,7 +7,7 @@ import (
 
 var once sync.Once
 
-var defaultArchetype = Archetype{
+var DefaultArchetype = Archetype{
 	ContentMarshaler: ContentMarshaler{
 		"":                 Json,
 		"application/json": Json,
