@@ -24,7 +24,6 @@ type DomainRouter interface {
 var _ DomainRouter = &Subdomain{}
 var _ fweight.Router = &Subdomain{}
 
-
 //function removeLevel removes the highest level domain from a domain name
 func popLevel(domain string) (newDomain, oldLevel string) {
 	var lastdot uint

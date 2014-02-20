@@ -9,6 +9,15 @@ import (
 	"strings"
 )
 
+func isSpecial(s string) bool {
+	switch s {
+	case "&", "":
+		return true
+	default:
+		return false
+	}
+}
+
 //A PathingRouter is part of the filepath, and can take part
 //in the descent of the filepath trie.
 type PathingRouter interface {
@@ -47,7 +56,8 @@ func (i IgnoreExtensions) RouteHTTP(r *http.Request) fweight.Router {
 
 //Type Path is a Router which routes by URL path. Files or directories
 //with empty names are not allowed. The empty name routes to the terminal
-//Router, the one used if the path stops here.
+//Router, the one used if the path stops here, and the ampersand ("&") path
+//swallows the next file segment in the path, regardless of its contents.
 //
 //It should be noted that when RouteHTTP is called
 //the PathRouter is followed to completion from the
@@ -121,20 +131,6 @@ func PathRouteHTTP(p PathingRouter, rq *http.Request) fweight.Router {
 	}
 
 	return currentRouter
-}
-
-//Type AnyFile is a PathingRouter that accepts one file
-//in the path, no matter what it is.
-type AnyFile struct {
-	fweight.Router
-}
-
-func (a AnyFile) RouteHTTP(rq *http.Request) fweight.Router {
-	return PathRouteHTTP(a, rq)
-}
-
-func (a AnyFile) Child(subpath string) (n fweight.Router, remainingSubpath string) {
-	return a.Router, subpath[strings.IndexRune(subpath, '/')+1:]
 }
 
 //RouteHTTP traverses the tree of Paths until the end of the URL path
@@ -220,6 +216,10 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n fweig
 		}
 		//I actually have no idea what this does
 	*/
+
+	if p["&"] != nil {
+		return p["&"], subpath[strings.IndexRune(subpath, '/')+1:]
+	}
 
 	//Not Found.
 	return nil, subpath
