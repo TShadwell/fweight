@@ -2,12 +2,12 @@ package route
 
 import (
 	"fmt"
+	"github.com/TShadwell/fweight"
 	"log"
 	"net/http"
 	"path"
 	"reflect"
 	"strings"
-	"github.com/TShadwell/fweight"
 )
 
 /*
@@ -21,47 +21,9 @@ type DomainRouter interface {
 	fweight.Router
 }
 
-var _ DomainRouter = &SubdomainRouter{}
-var _ fweight.Router = &SubdomainRouter{}
-var _ fweight.Router = &wildcardDomain{}
-var _ DomainRouter = &wildcardDomain{}
+var _ DomainRouter = &Subdomain{}
+var _ fweight.Router = &Subdomain{}
 
-/*
-	Type wildcardDomain is a DomainRouter that
-	simply removes the highest level domain
-	from the current subdomain string and then returns
-	its embedded Subdomain's decision on the rest of
-	the domain, allowing urls like documents.* or even
-	documents.*.* by nesting wildcardDomains.
-*/
-type wildcardDomain struct {
-	SubdomainRouter
-}
-
-/*
-	Because of the way the DNS works, domains such as ., .. or ... are valid,
-	coming from addresses like "google.com.", "google.com.." and "google.com..."
-	respecitvely. These domains are said to be "empty" because they do not resolve
-	any further than "google.com".
-*/
-func subdomainEmpty(subdomain string) bool {
-	if subdomain == "" || strings.TrimRight(subdomain, ".") == "" {
-		return true
-	}
-	return false
-}
-
-func (w wildcardDomain) RouteHTTP(rq *http.Request) fweight.Router {
-	rq.Host, _ = popLevel(rq.Host)
-	return w.SubdomainRouter.RouteHTTP(rq)
-}
-
-func (w wildcardDomain) Subdomain(subpath string) (s fweight.Router, remainingDomain string) {
-
-	//then we stop here, this is the last child.
-	subpath, _ = popLevel(subpath)
-	return w.SubdomainRouter, subpath
-}
 
 //function removeLevel removes the highest level domain from a domain name
 func popLevel(domain string) (newDomain, oldLevel string) {
@@ -81,15 +43,15 @@ func popLevel(domain string) (newDomain, oldLevel string) {
 
 	The empty subdomain ("") is used when the route terminates here.
 */
-type SubdomainRouter map[string]fweight.Router
+type Subdomain map[string]fweight.Router
 
 const termHere = ""
 
-func (s SubdomainRouter) Here(r fweight.Router) {
+func (s Subdomain) Here(r fweight.Router) {
 	s[termHere] = r
 }
 
-func (s SubdomainRouter) here() fweight.Router {
+func (s Subdomain) here() fweight.Router {
 	return s[termHere]
 }
 
@@ -115,7 +77,7 @@ func isSubdomain(r fweight.Router, sd DomainRouter) (b bool) {
 	Once the router is no longer a DomainRouter, it is returned.
 
 */
-func (s SubdomainRouter) RouteHTTP(rq *http.Request) fweight.Router {
+func (s Subdomain) RouteHTTP(rq *http.Request) fweight.Router {
 	var (
 		currentSubdomain DomainRouter = s
 		domain           string       = rq.Host
@@ -147,7 +109,7 @@ func (s SubdomainRouter) RouteHTTP(rq *http.Request) fweight.Router {
 	return currentRouter
 }
 
-func (s SubdomainRouter) String() (o string) {
+func (s Subdomain) String() (o string) {
 	o = "["
 	for k, v := range s {
 		o += fmt.Sprintf("%+q -> %v\n", k, reflect.ValueOf(v))
@@ -157,7 +119,7 @@ func (s SubdomainRouter) String() (o string) {
 
 func debRoute(ty, message string, v interface{}) {
 	var targetS string
-	if k, ok := v.(SubdomainRouter); ok {
+	if k, ok := v.(Subdomain); ok {
 		targetS = k.String()
 	} else {
 		targetS = reflect.ValueOf(v).String()
@@ -168,7 +130,7 @@ func debRoute(ty, message string, v interface{}) {
 
 //Function Subdomain is provided by all types implementing the
 //SubdomainRouter interface.
-func (s SubdomainRouter) Subdomain(subpath string) (fweight.Router, string) {
+func (s Subdomain) Subdomain(subpath string) (fweight.Router, string) {
 
 	//Check if we have bound a handler for the entire remaining route.
 	if sD, ok := s[subpath]; ok {
@@ -207,7 +169,7 @@ func (s SubdomainRouter) Subdomain(subpath string) (fweight.Router, string) {
 	return nil, subpath
 }
 
-func (s SubdomainRouter) Domain(name string, r fweight.Router) SubdomainRouter {
+func (s Subdomain) Domain(name string, r fweight.Router) Subdomain {
 	if s == nil {
 		s = map[string]fweight.Router{
 			name: r,
