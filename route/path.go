@@ -1,4 +1,4 @@
-package fweight
+package route
 
 import (
 	"log"
@@ -6,17 +6,18 @@ import (
 	Path "path"
 	"reflect"
 	"strings"
+	"github.com/TShadwell/fweight"
 )
 
 //A PathingRouter is part of the filepath, and can take part
 //in the descent of the filepath trie.
 type PathingRouter interface {
-	Child(subpath string) (n Router, remainingSubpath string)
+	Child(subpath string) (n fweight.Router, remainingSubpath string)
 }
 
 var (
-	_ PathingRouter = new(PathRouter)
-	_ Router        = new(PathRouter)
+	_ PathingRouter  = new(PathRouter)
+	_ fweight.Router = new(PathRouter)
 )
 
 //IgnoreExtensions is a PathRouter that ignores
@@ -30,7 +31,7 @@ func (i IgnoreExtensions) underlying() PathRouter {
 
 //Function Child is provided by all types implementing the PathingRouter
 //interface.
-func (i IgnoreExtensions) Child(subpath string) (Router, string) {
+func (i IgnoreExtensions) Child(subpath string) (fweight.Router, string) {
 	return i.underlying().ChildProcess(
 		subpath,
 		func(s string) string {
@@ -40,7 +41,7 @@ func (i IgnoreExtensions) Child(subpath string) (Router, string) {
 	)
 }
 
-func (i IgnoreExtensions) RouteHTTP(r *http.Request) Router {
+func (i IgnoreExtensions) RouteHTTP(r *http.Request) fweight.Router {
 	return PathingRouterRouteHTTP(i, r)
 }
 
@@ -56,7 +57,7 @@ func (i IgnoreExtensions) RouteHTTP(r *http.Request) Router {
 //a Path that routes a/b followed by one that routes a/b/c does
 //not result in a route of a/b/a/c, instead resulting in a route of
 //just a/b.
-type PathRouter map[string]Router
+type PathRouter map[string]fweight.Router
 
 func (p PathRouter) self() PathRouter {
 	if p == nil {
@@ -71,7 +72,7 @@ func (p PathRouter) self() PathRouter {
 //A non PathRouter child will cause the Router to
 //be returned to the caller of RouteHTTP, causing the
 //path to terminate there if it is a Handler.
-func (p PathRouter) AddChild(pR Router, name string) PathRouter {
+func (p PathRouter) AddChild(pR fweight.Router, name string) PathRouter {
 	p[name] = pR
 	return p
 }
@@ -79,24 +80,24 @@ func (p PathRouter) AddChild(pR Router, name string) PathRouter {
 //Sets the Handler that is used when the path terminates here.
 //This is the same as AddChild(r, ""); the empty string routes
 //to here.
-func (p PathRouter) Handler(r Router) PathRouter {
+func (p PathRouter) Handler(r fweight.Router) PathRouter {
 	return p.AddChild(r, "")
 }
 
-func isPathRouter(r Router) (b bool) {
+func isPathRouter(r fweight.Router) (b bool) {
 	_, b = r.(PathRouter)
 	return
 }
 
 //Performs RouteHTTP on a trie of PathingRouters.
-func PathingRouterRouteHTTP(p PathingRouter, rq *http.Request) Router {
+func PathingRouterRouteHTTP(p PathingRouter, rq *http.Request) fweight.Router {
 	/*
 		Now like SubdomainRouter!
 	*/
 	var (
 		currentPathingRouter PathingRouter = p
 		path                 string        = strings.Trim(rq.URL.Path, "/")
-		currentRouter        Router
+		currentRouter        fweight.Router
 	)
 
 	//fix paths
@@ -122,20 +123,34 @@ func PathingRouterRouteHTTP(p PathingRouter, rq *http.Request) Router {
 	return currentRouter
 }
 
+//Type AnyFile is a PathingRouter that accepts one file
+//in the path, no matter what it is.
+type AnyFile struct {
+	fweight.Router
+}
+
+func (a AnyFile) RouteHTTP(rq *http.Request) fweight.Router {
+	return PathingRouterRouteHTTP(a, rq)
+}
+
+func (a AnyFile) Child(subpath string) (n fweight.Router, remainingSubpath string) {
+	return a.Router, subpath[strings.IndexRune(subpath, '/')+1:]
+}
+
 //RouteHTTP traverses the tree of Paths until the end of the URL path
 //is encountered, returning the terminal router or nil.
-func (p PathRouter) RouteHTTP(rq *http.Request) Router {
+func (p PathRouter) RouteHTTP(rq *http.Request) fweight.Router {
 	return PathingRouterRouteHTTP(p, rq)
 }
 
 //Function Child is provided by all types that implement the PathingRouter interface.
-func (p PathRouter) Child(subpath string) (n Router, remainingSubpath string) {
+func (p PathRouter) Child(subpath string) (n fweight.Router, remainingSubpath string) {
 	return p.ChildProcess(subpath, nil)
 }
 
 //Function Child returns the next Router associated with the next
 //'hop' in the path.
-func (p PathRouter) ChildProcess(subpath string, process func(string) string) (n Router, remainingSubpath string) {
+func (p PathRouter) ChildProcess(subpath string, process func(string) string) (n fweight.Router, remainingSubpath string) {
 
 	if process == nil {
 		process = func(s string) string {
