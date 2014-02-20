@@ -44,8 +44,3 @@ type MiddlewareFunc func(http.Handler) http.Handler
 func (m MiddlewareFunc) Middleware(h http.Handler) http.Handler {
 	return m(h)
 }
-
-func isHandler(r Router) (b bool) {
-	_, b = r.(Handler)
-	return
-}

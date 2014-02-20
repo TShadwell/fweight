@@ -1,4 +1,4 @@
-package fweight
+package route
 
 import (
 	"net/http"

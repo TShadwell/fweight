@@ -1,17 +1,16 @@
 package route
 
 import (
-	"github.com/TShadwell/fweight"
 	"net/http"
 )
 
-func GetOnly(r fweight.Router) Verb {
+func GetOnly(r Router) Verb {
 	return Verb{
 		"GET": r,
 	}
 }
 
-var _ fweight.Router = make(Verb)
+var _ Router = make(Verb)
 
 var OptionsHandler func(i interface{}, rw http.ResponseWriter, rq *http.Request)
 var MethodNotAllowed func(i interface{}, rw http.ResponseWriter, rq *http.Request)
@@ -29,16 +28,16 @@ func (v Verb) Verbs() (ops []string) {
 	return
 }
 
-func (v Verb) RouteHTTP(rq *http.Request) fweight.Router {
+func (v Verb) RouteHTTP(rq *http.Request) Router {
 	if OptionsHandler != nil && rq.Method == "OPTIONS" {
-		return fweight.Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
+		return Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
 			OptionsHandler(v.Verbs(), rw, rq)
 		}))
 	}
 	if r := v.self()[rq.Method]; r != nil {
 		return r
 	} else {
-		return fweight.Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
+		return Handle(http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
 			rw.WriteHeader(405)
 
 			MethodNotAllowed(v.Verbs(), rw, rq)
@@ -47,9 +46,9 @@ func (v Verb) RouteHTTP(rq *http.Request) fweight.Router {
 }
 
 //A Router that routes based on verbs and provides
-type Verb map[string]fweight.Router
+type Verb map[string]Router
 
-func (p Verb) self() map[string]fweight.Router {
+func (p Verb) self() map[string]Router {
 	if p == nil {
 		p = make(Verb)
 	}
@@ -57,43 +56,43 @@ func (p Verb) self() map[string]fweight.Router {
 }
 
 //func Verb adds an HTTP verb to this VerbRouter.
-func (p Verb) Verb(verb string, hf fweight.Router) Verb {
+func (p Verb) Verb(verb string, hf Router) Verb {
 	p = p.self()
 	p[verb] = hf
 	return p
 }
 
-func (p Verb) Get(hf fweight.Router) Verb {
+func (p Verb) Get(hf Router) Verb {
 	p.Verb("GET", hf)
 	return p
 }
 
-func (p Verb) Post(hf fweight.Router) Verb {
+func (p Verb) Post(hf Router) Verb {
 	p.Verb("POST", hf)
 	return p
 }
 
-func (p Verb) Head(hf fweight.Router) Verb {
+func (p Verb) Head(hf Router) Verb {
 	p.Verb("HEAD", hf)
 	return p
 }
 
-func (p Verb) Put(hf fweight.Router) Verb {
+func (p Verb) Put(hf Router) Verb {
 	p.Verb("PUT", hf)
 	return p
 }
 
-func (p Verb) Delete(hf fweight.Router) Verb {
+func (p Verb) Delete(hf Router) Verb {
 	p.Verb("DELETE", hf)
 	return p
 }
 
-func (p Verb) Options(hf fweight.Router) Verb {
+func (p Verb) Options(hf Router) Verb {
 	p.Verb("OPTIONS", hf)
 	return p
 }
 
-func (p Verb) Patch(hf fweight.Router) Verb {
+func (p Verb) Patch(hf Router) Verb {
 	p.Verb("PATCH", hf)
 	return p
 }

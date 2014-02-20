@@ -17,7 +17,7 @@ meaning compression and security middleware that wraps this http.Handler
 will still be executed.
 */
 type RouteHandler struct {
-	fweight.Router
+	Router
 	//NotFound is called when a route for the request could not be found.
 	//Recover is called when there is a panic in a Router.
 	NotFound http.Handler
@@ -113,7 +113,7 @@ func (s RouteHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 		}
 
 		//if the type of the router is a Handler, we can terminate
-		if hl, ok := router.(fweight.Handler); ok {
+		if hl, ok := router.(Handler); ok {
 			//defer a function to recover panics within child functions.
 			if !failOnPanic {
 				defer func() {
