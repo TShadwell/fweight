@@ -1,7 +1,7 @@
 package object
 
 import (
-	"github.com/TShadwell/fweight"
+	"github.com/TShadwell/fweight/route"
 	"net/http"
 	"sync"
 )
@@ -44,8 +44,8 @@ func (h HTTPHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 	h.Handler.ServeObject(h.Getter.Get(rq), rw, rq)
 }
 
-func (h HTTPHandler) RouteHTTP(_ *http.Request) fweight.Router {
-	return fweight.Handle(h)
+func (h HTTPHandler) RouteHTTP(_ *http.Request) route.Router {
+	return route.Handle(h)
 }
 
 type Handler struct {
@@ -97,6 +97,6 @@ and MethodNotAllowed handlers.
 */
 func (a *Archetype) Bind() {
 	hnd := a.Handler()
-	fweight.OptionsHandler = hnd.ServeObject
-	fweight.MethodNotAllowed = hnd.ServeObject
+	route.OptionsHandler = hnd.ServeObject
+	route.MethodNotAllowed = hnd.ServeObject
 }
