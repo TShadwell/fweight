@@ -2,10 +2,13 @@ package cache
 
 import (
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 )
+
+const debug = false
 
 //Cache implements a thread-safe cache for polling resources.
 type Cache struct {
@@ -19,19 +22,22 @@ type Cache struct {
 }
 
 //Returns a Response with the current value of the Cache as an interface{}.
-func (c Cache) Get() interface{} {
+func (c *Cache) Get() interface{} {
 	return c.Value()
 }
 
 //Returns a Response with the current value of the Cache.
-func (c Cache) Value() Response {
+func (c *Cache) Value() Response {
 	c.RLock()
 	defer c.RUnlock()
 	if c.NextUpdate.Before(time.Now()) {
+		if debug {
+			log.Println("updating cache...", c.NextUpdate)
+		}
 		c.RUnlock()
 		c.Lock()
 
-		v := c.Get()
+		v := c.GetValue()
 		if e, ok := v.(error); ok {
 			c.error = e
 			c.stale = true
@@ -42,6 +48,9 @@ func (c Cache) Value() Response {
 		}
 
 		c.NextUpdate = time.Now().Add(c.Delay)
+		if debug {
+			log.Println("next update in", c.NextUpdate)
+		}
 		c.Unlock()
 		c.RLock()
 	}
