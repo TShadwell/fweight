@@ -2,6 +2,7 @@ package object
 
 import (
 	"github.com/TShadwell/fweight/route"
+	"log"
 	"net/http"
 	"sync"
 )
@@ -40,7 +41,17 @@ type HTTPHandler struct {
 	Handler
 }
 
+func (h *HTTPHandler) Bind(m MediaType, mf MarshalFunc) {
+	if h.Handler.ContentMarshaler == nil {
+		h.Handler.ContentMarshaler = make(ContentMarshaler)
+	}
+	h.Handler.ContentMarshaler[m] = mf
+}
+
 func (h HTTPHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
+	if debug {
+		log.Printf("%+v aa", h.Handler.ContentMarshaler)
+	}
 	h.Handler.ServeObject(h.Getter.Get(rq), rw, rq)
 }
 

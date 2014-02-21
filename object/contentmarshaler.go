@@ -13,13 +13,6 @@ import (
 
 type ContentMarshaler map[MediaType]MarshalFunc
 
-func (c ContentMarshaler) BindMarshaler(m MediaType, mf MarshalFunc) {
-	if c == nil{
-		c = make(ContentMarshaler)
-	}
-	c[m] = mf
-}
-
 type MarshalFunc func(v interface{}, m MediaType,
 	params map[string]string) (data []byte, contentType string, err error)
 
