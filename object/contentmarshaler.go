@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	htmltemplate "html/template"
+	"log"
 	"net/http"
 	"path"
 	texttemplate "text/template"
@@ -123,9 +124,9 @@ func Marshaler(cs []ContentMarshaler, cts ...ContentType) (mf MarshalFunc, ct Co
 //as well as the selected ContentType.
 //The extension of the request path is assumed to be the most preferable MIME type.
 func (c ContentMarshaler) RequestMarshaler(r *http.Request) (mf MarshalFunc, ct ContentType) {
-	types, _ := ParseContentType(r.Header["Accept"][0])
+	types, _ := ParseContentType(r.Header.Get("Accept"))
 	if m := pathMime(r.URL.Path); m != "" {
-		types = append([]ContentType{{MediaType: MediaType(m)}}, types...)
+		types = []ContentType{{MediaType: MediaType(m)}}
 	}
 
 	return c.Marshaler(types...)
@@ -135,9 +136,16 @@ func (c ContentMarshaler) RequestMarshaler(r *http.Request) (mf MarshalFunc, ct 
 //the *http.Request from the []ContentMarshaler cs in order of preference, as well as the selected ContentType.
 //The extension of the request path is assumed to be the most preferable MIME type.
 func RequestMarshaler(r *http.Request, cs ...ContentMarshaler) (mf MarshalFunc, c ContentType) {
-	types, _ := ParseContentType(r.Header["Accept"][0])
+	types, _ := ParseContentType(r.Header.Get("Accept"))
+	if debug {
+		log.Printf("%+v", r.Header.Get("Accept"))
+	}
 	if m := pathMime(r.URL.Path); m != "" {
-		types = append([]ContentType{{MediaType: MediaType(m)}}, types...)
+		a, b := pmt(m)
+		types = append([]ContentType{{a, b}}, types...)
+		if debug {
+			log.Printf("%+v", types)
+		}
 	}
 
 	mf, c = Marshaler(cs, types...)

@@ -1,6 +1,7 @@
 package object
 
 import (
+	"log"
 	"mime"
 	"path"
 	"strings"
@@ -44,7 +45,7 @@ func ParseContentType(cts string) (c []ContentType, err error) {
 	}
 
 	ctts := strings.Split(cts, ",")
-	c = make([]ContentType, len(cts))
+	c = make([]ContentType, len(ctts))
 	for i, v := range ctts {
 		c[i].MediaType, c[i].Params = pmt(v)
 	}
@@ -53,7 +54,14 @@ func ParseContentType(cts string) (c []ContentType, err error) {
 
 func pmt(v string) (mt MediaType, p map[string]string) {
 	var s string
-	s, p, _ = mime.ParseMediaType(v)
+	var err error
+	s, p, err = mime.ParseMediaType(v)
+	if debug && err != nil {
+		panic(err)
+	}
 	mt = MediaType(s)
+	if debug {
+		log.Println(mt, "---", p, "---", v, "---")
+	}
 	return
 }
