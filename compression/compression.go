@@ -131,14 +131,15 @@ var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
 
 		//create our writer, which compresses.
 		uw := writer{
-			rw:          ow,
-			Compression: compression,
+			rw: ow,
+			Compression: func(iw io.Writer) Compressor {
+				w.Header().Set("Content-Encoding", encoding)
+				return compression(iw)
+			},
 		}
 
 		//replace the writer (for the deferred Handler)
 		w = &uw
-
-		w.Header().Set("Content-Encoding", encoding)
 
 		//once it's written to our writer, flush it
 		flush = uw.flush
