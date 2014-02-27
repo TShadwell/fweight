@@ -26,20 +26,6 @@ var compressions = map[string]Compression{
 
 var rwm sync.RWMutex
 
-// bodyAllowedForStatus reports whether a given response status code
-// permits a body.  See RFC2616, section 4.4.
-func bodyAllowedForStatus(status int) bool {
-	switch {
-	case status >= 100 && status <= 199:
-		return false
-	case status == 204:
-		return false
-	case status == 304:
-		return false
-	}
-	return true
-}
-
 /*
 	Registers a new compression with this package. Gzip and Flate are already registered.
 	Name should be canonicalised to lower case.
@@ -76,7 +62,7 @@ func (w *writer) Header() http.Header {
 
 func (w *writer) Write(b []byte) (int, error) {
 	//only load compression on first write.
-	//this should precent errors when status disallows body.
+	//this should prevent errors when status disallows body.
 	if w.c == nil {
 		w.c = w.Compression(w.rw)
 	}
