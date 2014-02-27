@@ -26,6 +26,20 @@ var compressions = map[string]Compression{
 
 var rwm sync.RWMutex
 
+// bodyAllowedForStatus reports whether a given response status code
+// permits a body.  See RFC2616, section 4.4.
+func bodyAllowedForStatus(status int) bool {
+	switch {
+	case status >= 100 && status <= 199:
+		return false
+	case status == 204:
+		return false
+	case status == 304:
+		return false
+	}
+	return true
+}
+
 /*
 	Registers a new compression with this package. Gzip and Flate are already registered.
 	Name should be canonicalised to lower case.
@@ -52,26 +66,33 @@ func Flate(r io.Writer) (c Compressor) {
 //used to intercept and compress written bytes.
 type writer struct {
 	rw http.ResponseWriter
-	Compressor
+	Compression
+	c Compressor
 }
 
-func (w writer) Header() http.Header {
+func (w *writer) Header() http.Header {
 	return w.rw.Header()
 }
 
-func (w writer) Write(b []byte) (int, error) {
-	return w.Compressor.Write(b)
+func (w *writer) Write(b []byte) (int, error) {
+	//only load compression on first write.
+	//this should precent errors when status disallows body.
+	if w.c == nil {
+		w.c = w.Compression(w.rw)
+	}
+	return w.c.Write(b)
 }
 
-func (w writer) WriteHeader(i int) {
+func (w *writer) WriteHeader(i int) {
 	w.rw.WriteHeader(i)
 }
 
-func (w writer) flush() {
-	if err := w.Compressor.Close(); err != nil {
-		panic(err)
+func (w *writer) flush() {
+	if w.c != nil {
+		if err := w.c.Close(); err != nil {
+			panic(err)
+		}
 	}
-
 }
 
 var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
@@ -110,12 +131,12 @@ var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
 
 		//create our writer, which compresses.
 		uw := writer{
-			rw:         ow,
-			Compressor: compression(ow),
+			rw:          ow,
+			Compression: compression,
 		}
 
 		//replace the writer (for the deferred Handler)
-		w = uw
+		w = &uw
 
 		w.Header().Set("Content-Encoding", encoding)
 
