@@ -28,18 +28,18 @@ var (
 	_ Router        = new(Path)
 )
 
-//IgnoreExtensions is a PathRouter that ignores
+//NoExtPath is a PathRouter that ignores
 //the extensions of folders and files when matching
 //request URIs.
-type IgnoreExtensions Path
+type NoExtPath Path
 
-func (i IgnoreExtensions) underlying() Path {
+func (i NoExtPath) underlying() Path {
 	return Path(i)
 }
 
 //Function Child is provided by all types implementing the PathingRouter
 //interface.
-func (i IgnoreExtensions) Child(subpath string) (Router, string) {
+func (i NoExtPath) Child(subpath string) (Router, string) {
 	return i.underlying().ChildProcess(
 		subpath,
 		func(s string) string {
@@ -49,7 +49,7 @@ func (i IgnoreExtensions) Child(subpath string) (Router, string) {
 	)
 }
 
-func (i IgnoreExtensions) RouteHTTP(r *http.Request) Router {
+func (i NoExtPath) RouteHTTP(r *http.Request) Router {
 	return PathRouteHTTP(i, r)
 }
 
@@ -184,7 +184,7 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n Route
 	if len(splt) > 1 {
 		if pR, ok := p[process(splt[0])]; ok {
 			if debug {
-				log.Printf("[?] Routed down into %v remaining string %+q.\n", reflect.TypeOf(pR), splt[1])
+				log.Printf("[?] %v -> %v (%v).\n", splt[0], reflect.TypeOf(pR), splt[1])
 			}
 			return pR, splt[1]
 		}
@@ -217,7 +217,14 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n Route
 	*/
 
 	if p["&"] != nil {
-		return p["&"], subpath[strings.IndexRune(subpath, '/')+1:]
+		log.Printf("Ampersand present, swallowing one.")
+		pos := strings.IndexRune(subpath, '/')
+		if pos == -1 {
+			pos = len(subpath)
+		}
+		return p["&"], subpath[pos+1:]
+	} else if debug {
+		log.Printf("[?] No ampersand present in Path, no swallow.")
 	}
 
 	//Not Found.
