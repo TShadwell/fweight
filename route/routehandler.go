@@ -89,7 +89,7 @@ func (r RouteHandler) HandleInternalServerError(i interface{}) http.Handler {
 	if r.HandleInternalServerError == nil {
 		panic(fweight.Err(fweight.StatusInternalServerError))
 	}
-	return r.HandleInternalServerError(i)
+	return r.Recover.ServeRecover(i)
 }
 
 /*

@@ -36,6 +36,10 @@ func (a *Archetype) Router(g Getter) HTTPHandler {
 	}
 }
 
+func (a *Archetype) RouterFunc(g GetterFunc) HTTPHandler {
+	return a.Router(GetterFunc(g))
+}
+
 type HTTPHandler struct {
 	Getter
 	Handler
@@ -52,7 +56,7 @@ func (h HTTPHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 	if debug {
 		log.Printf("%+v aa", h.Handler.ContentMarshaler)
 	}
-	h.Handler.ServeObject(h.Getter.Get(rq), rw, rq)
+	h.Handler.ServeObject(h.Getter.Get(rw, rq), rw, rq)
 }
 
 func (h HTTPHandler) RouteHTTP(_ *http.Request) route.Router {

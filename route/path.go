@@ -218,11 +218,11 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n Route
 
 	if p["&"] != nil {
 		log.Printf("Ampersand present, swallowing one.")
-		pos := strings.IndexRune(subpath, '/')
+		pos := strings.IndexRune(subpath, '/') + 1
 		if pos == -1 {
 			pos = len(subpath)
 		}
-		return p["&"], subpath[pos+1:]
+		return p["&"], subpath[:pos]
 	} else if debug {
 		log.Printf("[?] No ampersand present in Path, no swallow.")
 	}
