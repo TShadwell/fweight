@@ -232,17 +232,46 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n Route
 	return nil, subpath
 }
 
+//Returns s up until a char in terminators, or the whole string.
+func TrimPast(s, terminators string) string {
+	pos := strings.IndexAny(s, terminators)
+	if pos == -1 {
+		//to take the whole string
+		pos = len(s)
+	}
+
+	return s[:pos]
+}
+
 //Function Ampersand is used to retrieve the URL part that was swallowed
 //by an ampersand path. To achieve this, `prefix` is trimmed from the
 //beginning of the url, and the resulting string is returned up
 //until an instance of a char in `terminators` or the end of the string.
 func Ampersand(url, prefix, terminators string) string {
-	url = strings.TrimLeft(url, prefix)
-	pos := strings.IndexAny(url, terminators)
-	if pos == -1 {
-		//to take the whole string
-		pos = len(url)
-	}
+	return TrimPast(strings.TrimLeft(url, prefix), terminators)
+}
 
-	return url[:pos]
+//Function PartN returns the Nth part of a URL, separated by '/'.
+//A leading slash ('/usr') is ignored.
+//If there are too few parts, empty string is returned.
+func PartN(url string, n int) string {
+	if url[0] == '/' {
+		if len(url) < 2 {
+			return ""
+		}
+		url = url[1:]
+	}
+	for i, ch := range url {
+		if ch == '/' {
+			n--
+		}
+
+		if n == 0 {
+			return TrimPast(
+				strings.TrimLeft(url[i+1:], "/"),
+				"/",
+			)
+		}
+	}
+	return "fail"
 }
