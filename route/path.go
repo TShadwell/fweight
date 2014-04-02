@@ -143,6 +143,22 @@ func (p Path) Child(subpath string) (n Router, remainingSubpath string) {
 	return p.ChildProcess(subpath, nil)
 }
 
+func swallowOne(subpath string) (subsectpath, swallowed string) {
+	slashPos := strings.Index(subpath, "/")
+	if slashPos == -1 {
+		swallowed = subpath
+		return
+	}
+
+	slashPos += 1
+	if slashPos > len(subpath) {
+		swallowed = subpath
+		return
+	}
+	subsectpath, swallowed = subpath[slashPos:], subpath[:slashPos-1]
+	return
+}
+
 //Function Child returns the next Router associated with the next
 //'hop' in the path.
 func (p Path) ChildProcess(subpath string, process func(string) string) (n Router, remainingSubpath string) {
@@ -169,27 +185,16 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n Route
 		return p[""], ""
 	}
 
-	processedSubpath := process(subpath)
+	remaining, popped := swallowOne(subpath)
 
-	//First, check if we have bound a handler for this whole
-	//subpath (a/b/c)
-	if pR, ok := p[processedSubpath]; ok {
-		return pR, ""
-	} else if debug {
-		log.Printf("[?] %v not wholly in %+v\n", subpath, p)
+	if debug {
+		log.Printf("If we chop one off, we get %s, %s\n", remaining, popped)
 	}
 
-	//Check if the next node is present
-	splt := strings.SplitN(subpath, "/", 2)
-	if len(splt) > 1 {
-		if pR, ok := p[process(splt[0])]; ok {
-			if debug {
-				log.Printf("[?] %v -> %v (%v).\n", splt[0], reflect.TypeOf(pR), splt[1])
-			}
-			return pR, splt[1]
-		}
+	if pathRouter, ok := p[process(popped)]; ok {
+		return pathRouter, remaining
 	} else if debug {
-		log.Printf("[?] %+v too short.\n", splt)
+		log.Printf("%s was not present.\n", process(popped))
 	}
 
 	//Check if we have a route that begins with the subpath
@@ -218,11 +223,7 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n Route
 
 	if p["&"] != nil {
 		log.Printf("Ampersand present, swallowing one.")
-		pos := strings.IndexRune(subpath, '/') + 1
-		if pos == -1 {
-			pos = len(subpath)
-		}
-		return p["&"], subpath[:pos]
+		return p["&"], remaining
 	} else if debug {
 		log.Printf("[?] No ampersand present in Path, no swallow.")
 	}

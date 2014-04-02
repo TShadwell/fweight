@@ -4,8 +4,8 @@ import (
 	"net/http"
 )
 
-const debug = false
-const failOnPanic = true
+const debug = true
+const failOnPanic = false
 
 type (
 	//A Router value is used to find the correct http.Handler
