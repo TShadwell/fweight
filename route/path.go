@@ -231,3 +231,18 @@ func (p Path) ChildProcess(subpath string, process func(string) string) (n Route
 	//Not Found.
 	return nil, subpath
 }
+
+//Function Ampersand is used to retrieve the URL part that was swallowed
+//by an ampersand path. To achieve this, `prefix` is trimmed from the
+//beginning of the url, and the resulting string is returned up
+//until an instance of a char in `terminators` or the end of the string.
+func Ampersand(url, prefix, terminators string) string {
+	url = strings.TrimLeft(url, prefix)
+	pos := strings.IndexAny(url, terminators)
+	if pos == -1 {
+		//to take the whole string
+		pos = len(url)
+	}
+
+	return url[:pos]
+}
