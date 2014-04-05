@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-const debug = true
+const debug = false
 const failOnPanic = false
 
 type (
