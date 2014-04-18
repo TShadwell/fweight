@@ -1,3 +1,3 @@
 package object
 
-const debug = true
+const debug = false
