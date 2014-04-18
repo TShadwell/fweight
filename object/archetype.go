@@ -21,11 +21,11 @@ type Archetype struct {
 	ContentMarshaler
 }
 
-func RouterFunc(g GetterFunc) HTTPHandler {
+func RouterFunc(g GetterFunc) *HTTPHandler {
 	return DefaultArchetype.Router(GetterFunc(g))
 }
 
-func Router(g Getter) HTTPHandler {
+func Router(g Getter) *HTTPHandler {
 	return DefaultArchetype.Router(g)
 }
 
@@ -35,8 +35,8 @@ func (a *Archetype) Handler() Handler {
 	}
 }
 
-func (a *Archetype) Router(g Getter) HTTPHandler {
-	return HTTPHandler{
+func (a *Archetype) Router(g Getter) *HTTPHandler {
+	return &HTTPHandler{
 		Getter: g,
 		Handler: Handler{
 			Archetype: a,
@@ -44,7 +44,7 @@ func (a *Archetype) Router(g Getter) HTTPHandler {
 	}
 }
 
-func (a *Archetype) RouterFunc(g GetterFunc) HTTPHandler {
+func (a *Archetype) RouterFunc(g GetterFunc) *HTTPHandler {
 	return a.Router(GetterFunc(g))
 }
 
@@ -61,9 +61,6 @@ func (h *HTTPHandler) Bind(m MediaType, mf MarshalFunc) {
 }
 
 func (h HTTPHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
-	if debug {
-		log.Printf("%+v aa", h.Handler.ContentMarshaler)
-	}
 	h.Handler.ServeObject(h.Getter.Get(rw, rq), rw, rq)
 }
 
@@ -85,6 +82,10 @@ func (h Handler) ServeObject(o interface{}, rw http.ResponseWriter, rq *http.Req
 		}
 	} else {
 		ms = []ContentMarshaler{h.ContentMarshaler}
+	}
+
+	if debug {
+		log.Printf("supported: %+v %+v\n", h.ContentMarshaler, h.Archetype.ContentMarshaler)
 	}
 
 	mf, ct := RequestMarshaler(rq, ms...)
