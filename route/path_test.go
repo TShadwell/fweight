@@ -48,7 +48,23 @@ func ExampleTrimpast() {
 	const path = "bin/pattern"
 
 	//prints the first segement of the path
-	fmt.Println(TrimPast(path, "/"))
+	fmt.Println(TrimPast(path, "/!"))
+
+	// Output:
+	// log
+	// bin
+}
+
+func ExampleTrimpastRune() {
+	const fn = "log.txt.gz"
+
+	//Prints the filename, minus the extension.
+	fmt.Println(TrimPast(fn, "."))
+
+	const path = "bin/pattern"
+
+	//prints the first segement of the path
+	fmt.Println(TrimPastRune(path, '/'))
 
 	// Output:
 	// log

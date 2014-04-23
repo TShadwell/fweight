@@ -242,6 +242,16 @@ func TrimPast(s, terminators string) string {
 	return s[:pos]
 }
 
+//Returns s up until r, or the whole string.
+func TrimPastRune(s string, r rune) string {
+	pos := strings.IndexRune(s, r)
+	if pos == -1 {
+		//whole string
+		pos = len(s)
+	}
+	return s[:pos]
+}
+
 //Function Ampersand is used to retrieve the URL part that was swallowed
 //by an ampersand path. To achieve this, `prefix` is trimmed from the
 //beginning of the url, and the resulting string is returned up
