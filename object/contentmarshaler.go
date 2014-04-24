@@ -15,13 +15,13 @@ import (
 
 type ContentMarshaler map[MediaType]MarshalFunc
 
-type MarshalFunc func(v interface{}, m MediaType,
+type MarshalFunc func(v interface{}, rq *http.Request, m MediaType,
 	params map[string]string) (data []byte, contentType string, err error)
 
 //HTMLTemplate returns a MarshalFunc that executes the data on template `t` using the html/template
 //package
 func HTMLTemplate(t *htmltemplate.Template) MarshalFunc {
-	return func(v interface{}, _ MediaType,
+	return func(v interface{}, _ *http.Request, _ MediaType,
 		_ map[string]string) (data []byte, contentType string, err error) {
 		contentType = "text/html;charset=utf8"
 		var bf bytes.Buffer
@@ -34,10 +34,37 @@ func HTMLTemplate(t *htmltemplate.Template) MarshalFunc {
 	}
 }
 
+//Parameters is the value that ExtendParameters passes to its wrapped MarshalFunc.
+type Parameters struct {
+	Request *http.Request
+	MediaType
+	Params map[string]string
+	Value  interface{}
+}
+
+func ExtendParameters(mf MarshalFunc) MarshalFunc {
+	return func(v interface{}, rq *http.Request, m MediaType,
+		params map[string]string) (data []byte, contentType string, err error) {
+
+		return mf(
+			Parameters{
+				Request:   rq,
+				MediaType: m,
+				Params:    params,
+				Value:     v,
+			},
+			rq,
+			m,
+			params,
+		)
+
+	}
+}
+
 //TextTemplate returns a MarshalFunc that executes the data on template `t` using the text/template
 //package.
 func TextTemplate(t *texttemplate.Template) MarshalFunc {
-	return func(v interface{}, _ MediaType,
+	return func(v interface{}, _ *http.Request, _ MediaType,
 		_ map[string]string) (data []byte, contentType string, err error) {
 		contentType = "text/plain;charset=utf8"
 		var bf bytes.Buffer
@@ -50,7 +77,7 @@ func TextTemplate(t *texttemplate.Template) MarshalFunc {
 	}
 }
 
-var Json MarshalFunc = func(v interface{}, _ MediaType,
+var Json MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 	contentType = "application/json;charset=utf8"
 	data, err = json.Marshal(v)
@@ -58,7 +85,7 @@ var Json MarshalFunc = func(v interface{}, _ MediaType,
 	return
 }
 
-var Xml MarshalFunc = func(v interface{}, _ MediaType,
+var Xml MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 
 	contentType = "application/xml;charset=utf8"
@@ -69,7 +96,7 @@ var Xml MarshalFunc = func(v interface{}, _ MediaType,
 var nullbytes = []byte("null")
 
 //See github.com/TShadwell/jsarray for details.
-var JsonArray MarshalFunc = func(v interface{}, _ MediaType,
+var JsonArray MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 
 	contentType = "application/json;charset=utf8"
@@ -77,12 +104,12 @@ var JsonArray MarshalFunc = func(v interface{}, _ MediaType,
 	return
 }
 
-var plain MarshalFunc = func(v interface{}, _ MediaType,
+var plain MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	_ map[string]string) ([]byte, string, error) {
 	return []byte(v.(string)), "text/plain", nil
 }
 
-var Gob MarshalFunc = func(v interface{}, _ MediaType,
+var Gob MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 
 	contentType = "application/gob"

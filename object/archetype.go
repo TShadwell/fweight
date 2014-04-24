@@ -107,7 +107,7 @@ func (h Handler) ServeObject(o interface{}, rw http.ResponseWriter, rq *http.Req
 		o = "None of the specified Content-Types supported."
 	}
 
-	dt, ctt, err := mf(o, ct.MediaType, ct.Params)
+	dt, ctt, err := mf(o, rq, ct.MediaType, ct.Params)
 	if err != nil {
 		panic(err)
 	}
