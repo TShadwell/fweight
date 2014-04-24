@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
+	"github.com/TShadwell/jsarray"
 	htmltemplate "html/template"
 	"log"
 	"net/http"
@@ -62,6 +63,17 @@ var Xml MarshalFunc = func(v interface{}, _ MediaType,
 
 	contentType = "application/xml"
 	data, err = xml.Marshal(v)
+	return
+}
+
+var nullbytes = []byte("null")
+
+//See github.com/TShadwell/jsarray for details.
+var JsonArray MarshalFunc = func(v interface{}, _ MediaType,
+	_ map[string]string) (data []byte, contentType string, err error) {
+
+	contentType = "application/json"
+	data, err = jsarray.Marshal(v)
 	return
 }
 
