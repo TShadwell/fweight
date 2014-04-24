@@ -257,7 +257,7 @@ func TrimPastRune(s string, r rune) string {
 //beginning of the url, and the resulting string is returned up
 //until an instance of a char in `terminators` or the end of the string.
 func Ampersand(url, prefix, terminators string) string {
-	return TrimPast(strings.TrimLeft(url, prefix), terminators)
+	return TrimPast(strings.TrimPrefix(url, prefix), terminators)
 }
 
 //Function PartN returns the Nth part of a URL, separated by '/'.
