@@ -61,7 +61,7 @@ var Json MarshalFunc = func(v interface{}, _ MediaType,
 var Xml MarshalFunc = func(v interface{}, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 
-	contentType = "application/xml"
+	contentType = "application/xml;charset=utf8"
 	data, err = xml.Marshal(v)
 	return
 }
@@ -72,7 +72,7 @@ var nullbytes = []byte("null")
 var JsonArray MarshalFunc = func(v interface{}, _ MediaType,
 	_ map[string]string) (data []byte, contentType string, err error) {
 
-	contentType = "application/json"
+	contentType = "application/json;charset=utf8"
 	data, err = jsarray.Marshal(v)
 	return
 }
