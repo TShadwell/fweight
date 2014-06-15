@@ -126,7 +126,7 @@ func (c ContentSecurityPolicy) Middleware(h http.Handler) http.Handler {
 		header = strings.Join(directives, "; ")
 	}
 	return http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
-		rq.Header.Add("Content-Security-Policy", header)
+		rw.Header().Add("Content-Security-Policy", header)
 		h.ServeHTTP(rw, rq)
 	})
 }
