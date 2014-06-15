@@ -97,8 +97,7 @@ type ContentSecurityPolicy struct {
 	Report string "report-uri"
 }
 
-//Returns a http.Handler that returns a response with the compiled Content-Security-Policy
-//header specified by 'c'. Handler 'h' is excecuted after adding the header.
+//Applies the Content Security Policy specified by 'c' to the http.Handler h.
 func (c ContentSecurityPolicy) Middleware(h http.Handler) http.Handler {
 	var header string
 	{
