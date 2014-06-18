@@ -111,11 +111,11 @@ var Plain MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	_ map[string]string) ([]byte, string, error) {
 	return []byte(v.(string)), "text/plain", nil
 }
+
 const planesStr string = "🛧🛪🛨🛦🛫🛩"
 
 var planes = []rune(planesStr)
 var nPlanes int
-
 
 //Planetext.
 //
@@ -128,7 +128,7 @@ var Plane MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	st = "text/plane"
 
 	rn := make([]rune, 100)
-	for i, ed := 0, cap(rn);i<ed;i++ {
+	for i, ed := 0, cap(rn); i < ed; i++ {
 		rn[i] = planes[rand.Intn(nPlanes)]
 	}
 
