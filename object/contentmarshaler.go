@@ -127,8 +127,8 @@ var Plane MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 
 	st = "text/plane"
 
-	rn := make([]rune, 0, 100)
-	for i, ed := 0, cap(bt);i<ed;i++ {
+	rn := make([]rune, 100)
+	for i, ed := 0, cap(rn);i<ed;i++ {
 		rn[i] = planes[rand.Intn(nPlanes)]
 	}
 
