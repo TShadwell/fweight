@@ -103,7 +103,7 @@ func (h Handler) ServeObject(o interface{}, rw http.ResponseWriter, rq *http.Req
 			}
 		}
 		//wtf man
-		mf = plain
+		mf = Plain
 		o = "None of the specified Content-Types supported."
 	}
 

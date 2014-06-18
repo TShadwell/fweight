@@ -8,9 +8,11 @@ import (
 	"github.com/TShadwell/jsarray"
 	htmltemplate "html/template"
 	"log"
+	"math/rand"
 	"net/http"
 	"path"
 	texttemplate "text/template"
+	"time"
 )
 
 type ContentMarshaler map[MediaType]MarshalFunc
@@ -104,9 +106,35 @@ var JsonArray MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	return
 }
 
-var plain MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
+//Plaintext. The underlying value of v must be string.
+var Plain MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	_ map[string]string) ([]byte, string, error) {
 	return []byte(v.(string)), "text/plain", nil
+}
+const planesStr string = "🛧🛪🛨🛦🛫🛩"
+
+var planes = []rune(planesStr)
+var nPlanes int
+
+
+//Planetext.
+//
+//🛧🛪🛨🛦🛫🛦 🛫🛨 🛨✈🛦🛧🛦 ✈🛬🛫🛫🛬🛫 🛩🛦✈🛩🛬🛬🛨 🛫 🛬🛨✈ 🛩 🛨
+var Plane MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
+	_ map[string]string) (bt []byte, st string, err error) {
+
+	rand.Seed(time.Now().Unix())
+
+	st = "text/plane"
+
+	rn := make([]rune, 0, 100)
+	for i, ed := 0, cap(bt);i<ed;i++ {
+		rn[i] = planes[rand.Intn(nPlanes)]
+	}
+
+	bt = []byte(string(rn))
+
+	return
 }
 
 var Gob MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
@@ -190,4 +218,8 @@ func RequestMarshaler(r *http.Request, cs ...ContentMarshaler) (mf MarshalFunc, 
 	mf, c = Marshaler(cs, types...)
 	return
 
+}
+
+func init() {
+	nPlanes = len(planes)
 }
