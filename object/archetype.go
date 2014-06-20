@@ -73,6 +73,7 @@ type Handler struct {
 	ContentMarshaler
 }
 
+//Serveobject serves an interface 'o' using the handler. If o is empty, the response will be empty.
 func (h Handler) ServeObject(o interface{}, rw http.ResponseWriter, rq *http.Request) {
 	var ms []ContentMarshaler
 	if h.Archetype != nil {
@@ -112,7 +113,10 @@ func (h Handler) ServeObject(o interface{}, rw http.ResponseWriter, rq *http.Req
 		panic(err)
 	}
 	rw.Header().Add("Content-Type", ctt)
-	rw.Write(dt)
+
+	if o != nil {
+		rw.Write(dt)
+	}
 }
 
 /*
