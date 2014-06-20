@@ -282,5 +282,5 @@ func PartN(url string, n int) string {
 			)
 		}
 	}
-	return "fail"
+	return ""
 }
