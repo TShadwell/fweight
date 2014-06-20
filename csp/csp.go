@@ -12,6 +12,7 @@ import (
 //A SandboxExceptionList is a space-separated list of identifiers
 //specifying which exceptions to make to the sandbox directive.
 type SandboxExceptionList string
+
 const (
 	//Allow form submission
 	AllowForms SandboxExceptionList = "allow-forms"
@@ -32,6 +33,7 @@ const (
 //A sourcelist is a space-separated list of identifiers
 //specifying which sources are acceptible.
 type SourceList string
+
 const (
 	Any SourceList = "*"
 	//Specifies that no sources are acceptible
@@ -94,7 +96,7 @@ type ContentSecurityPolicy struct {
 	//with length zero.
 	Sandbox SandboxExceptionList "sandbox"
 
-	//Instructs the browser to POST reports of policy failures to this URI 
+	//Instructs the browser to POST reports of policy failures to this URI
 	Report string "report-uri"
 }
 
@@ -103,36 +105,47 @@ func (c ContentSecurityPolicy) RouteHandler(h http.Handler) route.Handler {
 	return route.Handle(c.Middleware(h))
 }
 
+type cspHandler struct {
+	policy  string
+	handler http.Handler
+}
+
+func (c cspHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
+	rw.Header().Set("Content-Security-Policy", c.policy)
+	c.handler.ServeHTTP(rw, rq)
+}
+
 //Applies the Content Security Policy specified by 'c' to the http.Handler h.
 func (c ContentSecurityPolicy) Middleware(h http.Handler) http.Handler {
-	var header string
-	{
-		var directives []string
-		v := reflect.ValueOf(c)
-		t := v.Type()
-		for i, nf := 0, t.NumField(); i<nf; i++ {
-			f := t.Field(i)
-			if f.Tag == "" {
-				continue
-			}
-
-			sl := v.Field(i)
-			if sl.Kind() != reflect.String {
-				continue
-			}
-
-			st := sl.String()
-			if st == "" {
-				continue
-			}
-
-			directives = append(directives, string(f.Tag) + " " + st)
+	var csph cspHandler
+	var directives []string
+	v := reflect.ValueOf(c)
+	t := v.Type()
+	for i, nf := 0, t.NumField(); i < nf; i++ {
+		f := t.Field(i)
+		if f.Tag == "" {
+			continue
 		}
-		header = strings.Join(directives, "; ")
+
+		sl := v.Field(i)
+		if sl.Kind() != reflect.String {
+			continue
+		}
+
+		st := sl.String()
+		if st == "" {
+			continue
+		}
+
+		directives = append(directives, string(f.Tag)+" "+st)
+	}
+	csph.policy = strings.Join(directives, "; ")
+
+	if v, ok := h.(cspHandler); ok {
+		csph.handler = v.handler
+	} else {
+		csph.handler = h
 	}
 
-	return http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
-		rw.Header().Set("Content-Security-Policy", header)
-		h.ServeHTTP(rw, rq)
-	})
+	return csph
 }
