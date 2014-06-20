@@ -3,6 +3,7 @@
 package csp
 
 import (
+	"github.com/TShadwell/fweight/route"
 	"net/http"
 	"reflect"
 	"strings"
@@ -97,6 +98,11 @@ type ContentSecurityPolicy struct {
 	Report string "report-uri"
 }
 
+//Returns the Handler that would result from applying .Middleware to the given handler.
+func (c ContentSecurityPolicy) RouteHandler(h http.Handler) route.Handler {
+	return route.Handle(c.Middleware(h))
+}
+
 //Applies the Content Security Policy specified by 'c' to the http.Handler h.
 func (c ContentSecurityPolicy) Middleware(h http.Handler) http.Handler {
 	var header string
@@ -124,6 +130,7 @@ func (c ContentSecurityPolicy) Middleware(h http.Handler) http.Handler {
 		}
 		header = strings.Join(directives, "; ")
 	}
+
 	return http.HandlerFunc(func(rw http.ResponseWriter, rq *http.Request) {
 		rw.Header().Set("Content-Security-Policy", header)
 		h.ServeHTTP(rw, rq)
