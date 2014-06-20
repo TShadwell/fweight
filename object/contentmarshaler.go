@@ -112,6 +112,16 @@ var Plain MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
 	return []byte(v.(string)), "text/plain", nil
 }
 
+//Overwrites the ContentType of a MarshalFunc.
+func (m MarshalFunc) ContentType(ctt string) MarshalFunc {
+	return func(v interface{}, rq *http.Request, mt MediaType,
+		params map[string]string) (bt []byte, s string, err error) {
+		bt, _, err = m(v, rq, mt, params)
+		s = ctt
+		return
+	}
+}
+
 const planesStr string = "🛧🛪🛨🛦🛫🛩"
 
 var planes = []rune(planesStr)
