@@ -284,3 +284,12 @@ func PartN(url string, n int) string {
 	}
 	return ""
 }
+
+//Function Depth returns the depth in levels of a URL, separated by '/'.
+func Depth(url string) int {
+	s := strings.Trim(url, "/")
+	if s == "" {
+		return 0
+	}
+	return strings.Count(s, "/") + 1
+}
