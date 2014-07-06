@@ -125,6 +125,7 @@ var Middleware = fweight.MiddlewareFunc(func(h http.Handler) http.Handler {
 		w = &uw
 
 		w.Header().Set("Content-Encoding", encoding)
+		w.Header().Set("Vary", "Accept-Encoding")
 
 		//once it's written to our writer, flush it
 		flush = uw.flush
