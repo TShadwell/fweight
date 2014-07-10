@@ -3,7 +3,9 @@ package route
 import (
 	"fmt"
 	"github.com/TShadwell/fweight"
+	"log"
 	"net/http"
+	deb "runtime/debug"
 )
 
 /*
@@ -61,6 +63,12 @@ var HandleRecovery RecoverHandler = RecoverHandlerFunc(func(i interface{}) http.
 			`An Internal Server Error was encountered while handling your request:
 			%+q`,
 			fmt.Sprint(i),
+		)
+
+		log.Printf(
+			"Internal Server Error: %+q\n %s",
+			fmt.Sprint(i),
+			deb.Stack(),
 		)
 	})
 })
