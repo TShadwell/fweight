@@ -7,117 +7,97 @@ import (
 	"encoding/xml"
 	"github.com/TShadwell/jsarray"
 	htmltemplate "html/template"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"path"
+	"strings"
 	texttemplate "text/template"
 	"time"
 )
 
 type ContentMarshaler map[MediaType]MarshalFunc
 
-type MarshalFunc func(v interface{}, rq *http.Request, m MediaType,
-	params map[string]string) (data []byte, contentType string, err error)
+type Request struct {
+	*http.Request
+	Params    map[string]string
+	MediaType MediaType
+}
+
+type Responder struct {
+	I interface{}
+	http.ResponseWriter
+}
+
+func (r Responder) ContentType(ctt string) {
+	r.ResponseWriter.Header().Set("Content-Type", ctt)
+}
+
+type MarshalFunc func(r Responder, rq Request) (err error)
 
 //HTMLTemplate returns a MarshalFunc that executes the data on template `t` using the html/template
 //package
 func HTMLTemplate(t *htmltemplate.Template) MarshalFunc {
-	return func(v interface{}, _ *http.Request, _ MediaType,
-		_ map[string]string) (data []byte, contentType string, err error) {
-		contentType = "text/html;charset=utf8"
-		var bf bytes.Buffer
-		err = t.Execute(&bf, v)
-		if err != nil {
-			return
-		}
-		data = bf.Bytes()
+	return func(r Responder, rq Request) (err error) {
+		r.ContentType("text/html;charset=utf8")
+
+		err = t.Execute(r, r.I)
 		return
-	}
-}
-
-//Parameters is the value that ExtendParameters passes to its wrapped MarshalFunc.
-type Parameters struct {
-	Request *http.Request
-	MediaType
-	Params map[string]string
-	Value  interface{}
-}
-
-func ExtendParameters(mf MarshalFunc) MarshalFunc {
-	return func(v interface{}, rq *http.Request, m MediaType,
-		params map[string]string) (data []byte, contentType string, err error) {
-
-		return mf(
-			Parameters{
-				Request:   rq,
-				MediaType: m,
-				Params:    params,
-				Value:     v,
-			},
-			rq,
-			m,
-			params,
-		)
-
 	}
 }
 
 //TextTemplate returns a MarshalFunc that executes the data on template `t` using the text/template
 //package.
 func TextTemplate(t *texttemplate.Template) MarshalFunc {
-	return func(v interface{}, _ *http.Request, _ MediaType,
-		_ map[string]string) (data []byte, contentType string, err error) {
-		contentType = "text/plain;charset=utf8"
-		var bf bytes.Buffer
-		err = t.Execute(&bf, v)
-		if err != nil {
-			return
-		}
-		data = bf.Bytes()
+	return func(r Responder, rq Request) (err error) {
+		r.ContentType("text/plain;charset=utf8")
+		err = t.Execute(r, r.I)
+
 		return
 	}
 }
 
-var Json MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
-	_ map[string]string) (data []byte, contentType string, err error) {
-	contentType = "application/json;charset=utf8"
-	data, err = json.Marshal(v)
+var Json MarshalFunc = func(r Responder, rq Request) error {
+	r.ContentType("application/json;charset=utf8")
 
-	return
+	return json.NewEncoder(r).Encode(r.I)
 }
 
-var Xml MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
-	_ map[string]string) (data []byte, contentType string, err error) {
+var Xml MarshalFunc = func(r Responder, rq Request) error {
+	r.ContentType("application/xml;charset=utf8")
 
-	contentType = "application/xml;charset=utf8"
-	data, err = xml.Marshal(v)
-	return
+	return xml.NewEncoder(r).Encode(r.I)
 }
 
 var nullbytes = []byte("null")
 
 //See github.com/TShadwell/jsarray for details.
-var JsonArray MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
-	_ map[string]string) (data []byte, contentType string, err error) {
+var JsonArray MarshalFunc = func(r Responder, rq Request) (err error) {
+	r.ContentType("application/json;charset=utf8")
 
-	contentType = "application/json;charset=utf8"
-	data, err = jsarray.Marshal(v)
+	data, err := jsarray.Marshal(r.I)
+	if err != nil {
+		return
+	}
+
+	_, err = io.Copy(r, bytes.NewReader(data))
 	return
 }
 
 //Plaintext. The underlying value of v must be string.
-var Plain MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
-	_ map[string]string) ([]byte, string, error) {
-	return []byte(v.(string)), "text/plain", nil
+var Plain MarshalFunc = func(r Responder, rq Request) (err error) {
+	r.ContentType("text/plain;charset=utf8")
+
+	_, err = io.Copy(r, strings.NewReader(r.I.(string)))
+	return
 }
 
 //Overwrites the ContentType of a MarshalFunc.
 func (m MarshalFunc) ContentType(ctt string) MarshalFunc {
-	return func(v interface{}, rq *http.Request, mt MediaType,
-		params map[string]string) (bt []byte, s string, err error) {
-		bt, _, err = m(v, rq, mt, params)
-		s = ctt
+	return func(r Responder, rq Request) (err error) {
+		err = m(r, rq)
+		r.ContentType(ctt)
 		return
 	}
 }
@@ -130,34 +110,26 @@ var nPlanes int
 //Planetext.
 //
 //🛧🛪🛨🛦🛫🛦 🛫🛨 🛨✈🛦🛧🛦 ✈🛬🛫🛫🛬🛫 🛩🛦✈🛩🛬🛬🛨 🛫 🛬🛨✈ 🛩 🛨
-var Plane MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
-	_ map[string]string) (bt []byte, st string, err error) {
+var Plane MarshalFunc = func(r Responder, rq Request) (err error) {
 
 	rand.Seed(time.Now().Unix())
 
-	st = "text/plane"
+	r.ContentType("text/plane")
 
 	rn := make([]rune, 100)
 	for i, ed := 0, cap(rn); i < ed; i++ {
 		rn[i] = planes[rand.Intn(nPlanes)]
 	}
 
-	bt = []byte(string(rn))
+	_, err = io.Copy(r, strings.NewReader(string(rn)))
 
 	return
 }
 
-var Gob MarshalFunc = func(v interface{}, _ *http.Request, _ MediaType,
-	_ map[string]string) (data []byte, contentType string, err error) {
+var Gob MarshalFunc = func(r Responder, rq Request) (err error) {
+	r.ContentType("application/gob")
+	err = gob.NewEncoder(r).Encode(r.I)
 
-	contentType = "application/gob"
-	var buf bytes.Buffer
-	err = gob.NewEncoder(&buf).Encode(v)
-	if err != nil {
-		return
-	}
-
-	data = buf.Bytes()
 	return
 }
 
@@ -215,7 +187,7 @@ func (c ContentMarshaler) RequestMarshaler(r *http.Request) (mf MarshalFunc, ct 
 func RequestMarshaler(r *http.Request, cs ...ContentMarshaler) (mf MarshalFunc, c ContentType) {
 	types, _ := ParseContentType(r.Header.Get("Accept"))
 	if debug {
-		log.Printf("%+v", r.Header.Get("Accept"))
+		log.Printf("<- Accept: %+v", r.Header.Get("Accept"))
 	}
 	if m := pathMime(r.URL.Path); m != "" {
 		a, b := pmt(m)
@@ -226,6 +198,10 @@ func RequestMarshaler(r *http.Request, cs ...ContentMarshaler) (mf MarshalFunc, 
 	}
 
 	mf, c = Marshaler(cs, types...)
+
+	if debug {
+		log.Printf("Picked content type: %s\nMarshaler: %+v", c, mf)
+	}
 	return
 
 }

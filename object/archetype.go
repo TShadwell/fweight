@@ -108,15 +108,27 @@ func (h Handler) ServeObject(o interface{}, rw http.ResponseWriter, rq *http.Req
 		o = "None of the specified Content-Types supported."
 	}
 
-	dt, ctt, err := mf(o, rq, ct.MediaType, ct.Params)
+	responder := Responder{
+		I:              o,
+		ResponseWriter: rw,
+	}
+
+	err := mf(
+		responder,
+		Request{
+			Request:   rq,
+			Params:    ct.Params,
+			MediaType: ct.MediaType,
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
-	rw.Header().Add("Content-Type", ctt)
 
-	if o != nil {
-		rw.Write(dt)
+	if debug {
+		log.Println("Decided on Content-Type", responder.ContentType)
 	}
+
 }
 
 /*
