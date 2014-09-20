@@ -28,10 +28,14 @@ type Request struct {
 type Responder struct {
 	I interface{}
 	http.ResponseWriter
+	cttset bool
 }
 
+//The first call to this function sets the content type of the response.
 func (r Responder) ContentType(ctt string) {
-	r.ResponseWriter.Header().Set("Content-Type", ctt)
+	if r.ResponseWriter.Header().Get("Content-Type") == "" {
+		r.ResponseWriter.Header().Set("Content-Type", ctt)
+	}
 }
 
 type MarshalFunc func(r Responder, rq Request) (err error)
@@ -96,8 +100,8 @@ var Plain MarshalFunc = func(r Responder, rq Request) (err error) {
 //Overwrites the ContentType of a MarshalFunc.
 func (m MarshalFunc) ContentType(ctt string) MarshalFunc {
 	return func(r Responder, rq Request) (err error) {
-		err = m(r, rq)
 		r.ContentType(ctt)
+		err = m(r, rq)
 		return
 	}
 }
