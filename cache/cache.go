@@ -77,9 +77,9 @@ type Response struct {
 
 //HTTPResponse is a convenience function that makes the http request rq periodically and
 //processes the response with 'process'.
-func HTTPResponse(rq *http.Request, process func(b []byte) interface{}, t time.Duration) *Cache {
+func HTTPResponse(rq *http.Request, process func(b []byte) interface{}, client *http.Client, t time.Duration) *Cache {
 	return New(func() interface{} {
-		r, err := http.DefaultClient.Do(rq)
+		r, err := client.Do(rq)
 		if err != nil {
 			return err
 		}
